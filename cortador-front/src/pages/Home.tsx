@@ -1,5 +1,9 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import PhotoGallery from "../components/PhotoGallery";
+import PlaceholderImage from "../components/PlaceholderImage";
+import { galleryPhotos } from "../config/gallery";
 import { siteConfig } from "../config/site";
 
 // Textos de las dos modalidades de servicio, se muestran en la home.
@@ -42,18 +46,32 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
-// Página de inicio: hero, modalidades de servicio, cómo funciona y CTA final.
+// Foto destacada para el hero, elegida entre las de la galería.
+const heroPhoto = galleryPhotos.find((photo) => photo.id === "2") ?? galleryPhotos[0];
+
+// Página de inicio: hero, quién soy, galería, modalidades de servicio,
+// cómo funciona y CTA final.
 export default function Home() {
+  const location = useLocation();
+
+  // El botón "Galería" de la cabecera enlaza a "/#galeria": si venimos
+  // de otra página, al llegar aquí hacemos scroll hasta esa sección.
+  useEffect(() => {
+    if (location.hash === "#galeria") {
+      document.getElementById("galeria")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [location]);
+
   return (
     <>
-      {/* Hero: primer bloque que se ve al entrar */}
-      <section className="mx-auto max-w-6xl px-6 pb-24 pt-20 sm:pt-28">
+      {/* Hero: primer bloque que se ve al entrar, con foto grande a un lado
+          para que el negocio se sienta fotográfico desde el primer segundo. */}
+      <section className="mx-auto grid max-w-6xl gap-10 px-6 pb-20 pt-16 sm:pt-24 lg:grid-cols-2 lg:items-center lg:gap-16">
         <motion.div
           initial="hidden"
           animate="visible"
           variants={fadeUp}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="max-w-2xl"
         >
           <p className="font-display text-sm uppercase tracking-[0.2em] text-brand-600">
             {siteConfig.tagline}
@@ -72,10 +90,95 @@ export default function Home() {
             Reservar ahora
           </Link>
         </motion.div>
+
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.15 }}
+        >
+          <PlaceholderImage
+            url={heroPhoto.url}
+            alt={heroPhoto.caption}
+            className="aspect-[4/5] w-full rounded-sm"
+          />
+        </motion.div>
       </section>
 
-      {/* Servicios: las dos modalidades de corte */}
+      {/* Quién soy: presenta a la persona detrás del servicio, justo
+          después del hero, porque el cliente contrata a un profesional
+          concreto, no solo un servicio. */}
       <section className="border-t border-border bg-surface-alt">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[minmax(0,320px)_1fr] lg:items-center lg:gap-16">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={fadeUp}
+            transition={{ duration: 0.5 }}
+          >
+            <PlaceholderImage
+              url={siteConfig.owner.photoUrl}
+              alt={`Foto de ${siteConfig.owner.name}`}
+              className="aspect-[3/4] w-full max-w-xs rounded-sm"
+            />
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={fadeUp}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <p className="font-display text-sm uppercase tracking-[0.2em] text-brand-600">
+              Quién soy
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-semibold text-ink">
+              {siteConfig.owner.name}
+            </h2>
+            <p className="mt-5 max-w-2xl text-ink-muted">{siteConfig.owner.bio}</p>
+
+            <div className="mt-8 flex gap-10">
+              <div>
+                <span className="font-display text-3xl font-semibold text-ink">
+                  {siteConfig.owner.yearsExperience}+
+                </span>
+                <p className="mt-1 text-sm text-ink-muted">años de experiencia</p>
+              </div>
+              <div>
+                <span className="font-display text-3xl font-semibold text-ink">
+                  {siteConfig.owner.eventsCount}+
+                </span>
+                <p className="mt-1 text-sm text-ink-muted">eventos realizados</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Galería: fotos de eventos, para que el cliente se haga una idea
+          de lo que contrata. El id="galeria" es el destino del enlace
+          "Galería" de la cabecera y el pie de página. */}
+      <section id="galeria" className="mx-auto max-w-4xl scroll-mt-20 px-6 py-20">
+        <motion.h2
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={fadeUp}
+          transition={{ duration: 0.5 }}
+          className="font-display text-3xl font-semibold text-ink"
+        >
+          Eventos en los que hemos estado
+        </motion.h2>
+
+        <div className="mt-10">
+          <PhotoGallery photos={galleryPhotos} />
+        </div>
+      </section>
+
+      {/* Modalidades: las dos formas de contratar el servicio */}
+      <section className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-20">
           <motion.h2
             initial="hidden"
@@ -88,7 +191,7 @@ export default function Home() {
             Modalidades de servicio
           </motion.h2>
 
-          <div className="mt-10 grid gap-6 sm:grid-cols-2">
+          <div className="mt-10 grid gap-10 sm:grid-cols-2">
             {services.map((service, index) => (
               <motion.div
                 key={service.title}
@@ -97,7 +200,7 @@ export default function Home() {
                 viewport={{ once: true, margin: "-80px" }}
                 variants={fadeUp}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="rounded-2xl border border-border bg-surface p-8"
+                className="border-t border-brand-400 pt-6"
               >
                 <h3 className="font-display text-xl font-semibold text-ink">{service.title}</h3>
                 <p className="mt-3 text-ink-muted">{service.description}</p>
@@ -108,35 +211,37 @@ export default function Home() {
       </section>
 
       {/* Cómo funciona: los 3 pasos del proceso */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <motion.h2
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
-          transition={{ duration: 0.5 }}
-          className="font-display text-3xl font-semibold text-ink"
-        >
-          Cómo funciona
-        </motion.h2>
+      <section className="border-t border-border bg-surface-alt">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <motion.h2
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={fadeUp}
+            transition={{ duration: 0.5 }}
+            className="font-display text-3xl font-semibold text-ink"
+          >
+            Cómo funciona
+          </motion.h2>
 
-        <div className="mt-10 grid gap-10 sm:grid-cols-3">
-          {steps.map((step, index) => (
-            <motion.div
-              key={step.number}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-80px" }}
-              variants={fadeUp}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <span className="font-display text-4xl font-semibold text-brand-400">
-                {step.number}
-              </span>
-              <h3 className="mt-3 font-display text-lg font-semibold text-ink">{step.title}</h3>
-              <p className="mt-2 text-ink-muted">{step.description}</p>
-            </motion.div>
-          ))}
+          <div className="mt-10 grid gap-10 sm:grid-cols-3">
+            {steps.map((step, index) => (
+              <motion.div
+                key={step.number}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-80px" }}
+                variants={fadeUp}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <span className="font-display text-4xl font-semibold text-brand-400">
+                  {step.number}
+                </span>
+                <h3 className="mt-3 font-display text-lg font-semibold text-ink">{step.title}</h3>
+                <p className="mt-2 text-ink-muted">{step.description}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
