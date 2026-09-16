@@ -1,11 +1,21 @@
 package com.cortador.back.config;
 
+import com.cortador.back.security.JwtAuthenticationEntryPoint;
+import com.cortador.back.security.JwtAuthenticationFilter;
+import com.cortador.back.security.RestAccessDeniedHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -13,17 +23,20 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * Configuración de seguridad temporal. Ahora mismo todos los endpoints
- * están abiertos porque el login de admin con JWT todavía no existe - sin
- * esta clase, Spring Security bloquearía todo detrás de una contraseña
- * generada al azar, y no podríamos ni probar el formulario público.
+ * Configuración de seguridad. La sesión es STATELESS (no hay cookies de
+ * sesión): cada petición a un endpoint protegido debe llevar un JWT
+ * válido en la cabecera Authorization, comprobado por JwtAuthenticationFilter.
  *
- * La sesión ya está en modo STATELESS: cuando añadamos JWT, solo deberían
- * quedar abiertos el login y los GET públicos (tipos de jamón, crear una
- * reserva); todo lo demás debe pedir un token válido.
+ * Público: registrar una reserva, ver el catálogo de jamones y el login.
+ * Todo lo demás (listar/editar reservas) es solo para el admin logueado.
  */
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     // El frontend de React corre en otro puerto distinto al de la API, así
     // que el navegador exige CORS aunque los dos estén en localhost.
@@ -31,12 +44,33 @@ public class SecurityConfig {
     private String allowedOrigin;
 
     @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // AuthenticationManager es lo que usa AuthController para comprobar
+    // el email/contraseña del login. Spring Boot lo construye solo a
+    // partir de CustomUserDetailsService y el PasswordEncoder de arriba.
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/ham-types/**").permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

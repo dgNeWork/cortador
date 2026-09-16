@@ -21,9 +21,8 @@ import java.util.List;
 
 /**
  * El POST es público (lo usa el formulario de reserva del cliente).
- * El GET y el PATCH están pensados para el futuro panel de admin - de
- * momento no están protegidos porque el login con JWT aún no existe
- * (ver SecurityConfig).
+ * El GET y el PATCH son para el panel de admin y exigen login (ver
+ * SecurityConfig, que es quien decide qué rutas piden token).
  */
 @RestController
 @RequestMapping("/api/bookings")
