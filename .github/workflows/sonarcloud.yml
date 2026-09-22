@@ -13,6 +13,25 @@ on:
 jobs:
   build-and-analyze:
     runs-on: ubuntu-latest
+    # CortadorBackApplicationTests levanta el contexto completo de Spring, y
+    # eso exige una base de datos real (igual que en local, donde Dani tiene
+    # Postgres corriendo con Homebrew). Este servicio monta ese mismo
+    # Postgres solo para la duración del job, con los mismos usuario/BD que
+    # ya usan los valores por defecto de application.properties.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cortador_db
+          POSTGRES_USER: cortador_user
+          POSTGRES_PASSWORD: cortador_dev_pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
