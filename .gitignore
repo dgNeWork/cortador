@@ -1,0 +1,6 @@
+# Carpetas que crea sonar-scanner al analizar el proyecto en local
+# (cache de análisis y logs de trabajo, no aportan nada al repo).
+.scannerwork/
+.sonar/
+
+.DS_Store
