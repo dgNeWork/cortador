@@ -67,6 +67,13 @@ jobs:
         working-directory: cortador-front
         run: npm run test:coverage
 
+      # Los tests pueden pasar aunque el build esté roto (por ejemplo, un
+      # error de tipos que solo detecta tsc), así que se compila también
+      # para que ese fallo salga aquí y no al desplegar.
+      - name: Compilar el frontend (TypeScript + Vite)
+        working-directory: cortador-front
+        run: npm run build
+
       - name: Analizar con SonarCloud
         uses: SonarSource/sonarqube-scan-action@v4
         env:
