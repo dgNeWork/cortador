@@ -1,22 +1,31 @@
 import { Route, Routes } from "react-router-dom";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminLayout from "./layouts/AdminLayout";
+import PublicLayout from "./layouts/PublicLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLogin from "./pages/admin/AdminLogin";
 import Booking from "./pages/Booking";
 import Home from "./pages/Home";
 
-// Estructura general de la app: cabecera y pie fijos, y en medio la
-// página que corresponda según la URL (home o formulario de reserva).
+// Mapa de rutas de la app. Hay dos "marcos":
+// - PublicLayout (cabecera y pie de la web): home, reservar y el login
+//   del cortador.
+// - AdminLayout (barra del panel), dentro de ProtectedRoute: solo se
+//   puede entrar con la sesión iniciada.
 export default function App() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/reservar" element={<Booking />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <Routes>
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/reservar" element={<Booking />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+      </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }

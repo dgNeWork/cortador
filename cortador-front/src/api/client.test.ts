@@ -4,10 +4,12 @@
 // necesidad de tener el backend arrancado.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, ApiError } from "./client";
+import { getSession, saveSession } from "../auth/session";
 
 describe("apiFetch", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it("cuando la respuesta es correcta, devuelve el JSON ya convertido", async () => {
@@ -59,5 +61,46 @@ describe("apiFetch", () => {
 
     expect(error.status).toBe(400);
     expect(error.fieldErrors).toEqual({ customerEmail: "Email no válido" });
+  });
+
+  // ---- Peticiones del panel de admin (opción auth) ----
+
+  // Devuelve la cabecera Authorization con la que se llamó al fetch falso.
+  function sentAuthorizationHeader(fakeFetch: ReturnType<typeof vi.fn>): string | undefined {
+    const [, init] = fakeFetch.mock.calls[0];
+    return (init.headers as Record<string, string>).Authorization;
+  }
+
+  it("con auth: true y sesión iniciada, envía el token en la cabecera Authorization", async () => {
+    saveSession({ token: "token-de-prueba", email: "admin@example.com" });
+    const fakeFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    vi.stubGlobal("fetch", fakeFetch);
+
+    await apiFetch("/bookings", { auth: true });
+
+    expect(sentAuthorizationHeader(fakeFetch)).toBe("Bearer token-de-prueba");
+  });
+
+  it("sin auth, no envía el token aunque haya sesión (las peticiones públicas no lo necesitan)", async () => {
+    saveSession({ token: "token-de-prueba", email: "admin@example.com" });
+    const fakeFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    vi.stubGlobal("fetch", fakeFetch);
+
+    await apiFetch("/ham-types");
+
+    expect(sentAuthorizationHeader(fakeFetch)).toBeUndefined();
+  });
+
+  it("si una petición con auth devuelve 401 (token caducado), cierra la sesión", async () => {
+    saveSession({ token: "token-caducado", email: "admin@example.com" });
+    const fakeFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: "Es necesario iniciar sesión" }),
+    });
+    vi.stubGlobal("fetch", fakeFetch);
+
+    await expect(apiFetch("/bookings", { auth: true })).rejects.toMatchObject({ status: 401 });
+    expect(getSession()).toBeNull();
   });
 });

@@ -13,7 +13,15 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-ink-muted">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <p className="font-display text-base text-ink">{siteConfig.businessName}</p>
+            <p className="flex items-baseline gap-3">
+              <span className="font-display text-base text-ink">{siteConfig.businessName}</span>
+              {/* Acceso al panel del cortador: discreto para no distraer
+                  al cliente, pero visible para que el cortador no tenga
+                  que acordarse de escribir /admin en la barra. */}
+              <Link to="/admin" className="text-xs text-ink-muted/70 underline-offset-2 transition-colors hover:text-ink hover:underline">
+                Acceso cortador
+              </Link>
+            </p>
             <p className="mt-1">{siteConfig.tagline}</p>
           </div>
           <nav className="flex gap-6">
