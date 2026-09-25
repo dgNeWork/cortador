@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             fieldErrors.put(error.getField(), error.getDefaultMessage());
         }
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed", fieldErrors);
+        return buildResponse(HttpStatus.BAD_REQUEST, "Revisa los campos marcados", fieldErrors);
     }
 
     /**

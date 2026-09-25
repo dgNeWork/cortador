@@ -13,6 +13,6 @@ import lombok.Setter;
 @Setter
 public class BookingStatusUpdateRequest {
 
-    @NotNull(message = "Status is required")
+    @NotNull(message = "El estado es obligatorio")
     private BookingStatus status;
 }

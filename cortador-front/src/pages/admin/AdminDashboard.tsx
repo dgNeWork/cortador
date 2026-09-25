@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getBookings, updateBookingStatus } from "../../api/bookings";
+import { adjustBookingPrice, getBookings, updateBookingStatus } from "../../api/bookings";
 import { ApiError } from "../../api/client";
 import BookingCard from "../../components/admin/BookingCard";
 import type { BookingAction } from "../../components/admin/bookingActions";
 import { BOOKING_STATUS_LABELS } from "../../labels";
-import type { BookingResponse, BookingStatus } from "../../types";
+import type { BookingResponse, BookingStatus, PriceAdjustmentRequest } from "../../types";
 
 // Pestañas del filtro. "ALL" no es un estado real, es "ver todas".
 type StatusFilter = BookingStatus | "ALL";
@@ -101,6 +101,13 @@ export default function AdminDashboard() {
     }
   }
 
+  // Ajuste de precio: si falla, el error se relanza para que lo muestre
+  // el propio formulario de precio de la tarjeta, junto a sus campos.
+  async function handleAdjustPrice(booking: BookingResponse, data: PriceAdjustmentRequest) {
+    const updated = await adjustBookingPrice(booking.id, data);
+    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+  }
+
   return (
     <section className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -158,6 +165,7 @@ export default function AdminDashboard() {
               booking={booking}
               updating={updatingId === booking.id}
               onAction={handleAction}
+              onAdjustPrice={handleAdjustPrice}
             />
           ))}
       </div>

@@ -34,7 +34,16 @@ public class BookingResponse {
     private ServiceType serviceType;
     private String hamTypeName;
     private BookingStatus status;
+    private String localityName;
+    private Integer distanceKm;
+    private BigDecimal serviceCost;
+    private BigDecimal hamCost;
+    private BigDecimal travelCost;
+    // Total calculado (null si era "a consultar").
     private BigDecimal estimatedPrice;
+    // Precio ajustado por el cortador y su motivo (null si no lo ha tocado).
+    private BigDecimal finalPrice;
+    private String priceNote;
     private String notes;
     private LocalDateTime createdAt;
 }

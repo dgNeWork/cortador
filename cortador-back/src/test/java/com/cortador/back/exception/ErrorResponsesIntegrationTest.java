@@ -46,6 +46,19 @@ class ErrorResponsesIntegrationTest {
     }
 
     @Test
+    void reservaConCamposVaciosDevuelveLosErroresEnEspanol() throws Exception {
+        // Estos mensajes los ve el cliente debajo de cada campo del
+        // formulario de reserva, así que tienen que estar en español.
+        HttpResponse<String> response = postBooking("application/json", "{}");
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body())
+                .contains("Revisa los campos marcados")
+                .contains("El nombre es obligatorio")
+                .contains("La fecha es obligatoria");
+    }
+
+    @Test
     void valorInexistenteEnUnEnumDevuelve400() throws Exception {
         // "PARTY" no existe en EventType: Jackson no puede convertirlo y
         // lanza el mismo tipo de error que con un JSON roto.

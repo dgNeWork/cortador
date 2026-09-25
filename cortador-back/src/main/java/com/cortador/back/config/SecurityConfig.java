@@ -27,8 +27,10 @@ import java.util.List;
  * sesión): cada petición a un endpoint protegido debe llevar un JWT
  * válido en la cabecera Authorization, comprobado por JwtAuthenticationFilter.
  *
- * Público: registrar una reserva, ver el catálogo de jamones y el login.
- * Todo lo demás (listar/editar reservas) es solo para el admin logueado.
+ * Público: registrar una reserva, pedir su presupuesto, ver el catálogo de
+ * jamones y las localidades, y el login.
+ * El resto (listar/editar reservas, el catálogo del panel...) es solo
+ * para el admin logueado.
  */
 @Configuration
 @RequiredArgsConstructor
@@ -68,6 +70,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/quote").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/localities").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ham-types/**").permitAll()
                         // /error es la ruta interna a la que Spring reenvía los
                         // errores que no recoge GlobalExceptionHandler (por
@@ -76,6 +80,8 @@ public class SecurityConfig {
                         // público acabaría en un 401 engañoso en vez de su
                         // código real (400, 415...).
                         .requestMatchers("/error").permitAll()
+                        // Endpoints del panel del cortador (catálogo, tarifas...).
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
