@@ -1,9 +1,13 @@
 package com.cortador.back.controller;
 
 import com.cortador.back.dto.request.BookingRequest;
+import com.cortador.back.dto.request.PriceAdjustmentRequest;
+import com.cortador.back.dto.request.QuoteRequest;
 import com.cortador.back.dto.request.BookingStatusUpdateRequest;
 import com.cortador.back.dto.response.BookingResponse;
+import com.cortador.back.dto.response.QuoteResponse;
 import com.cortador.back.model.Booking;
+import com.cortador.back.pricing.QuoteService;
 import com.cortador.back.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * El POST es público (lo usa el formulario de reserva del cliente).
- * El GET y el PATCH son para el panel de admin y exigen login (ver
+ * Los POST son públicos (los usa el formulario de reserva del cliente:
+ * crear la reserva y pedir el presupuesto). El GET y los PATCH son para
+ * el panel de admin y exigen login (ver
  * SecurityConfig, que es quien decide qué rutas piden token).
  */
 @RestController
@@ -30,11 +35,18 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final QuoteService quoteService;
 
     @PostMapping
     public ResponseEntity<BookingResponse> create(@Valid @RequestBody BookingRequest request) {
         Booking booking = bookingService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(booking));
+    }
+
+    // Presupuesto en vivo para el formulario (público, no guarda nada).
+    @PostMapping("/quote")
+    public ResponseEntity<QuoteResponse> quote(@Valid @RequestBody QuoteRequest request) {
+        return ResponseEntity.ok(QuoteResponse.from(quoteService.quote(request)));
     }
 
     @GetMapping
@@ -57,6 +69,14 @@ public class BookingController {
         return ResponseEntity.ok(toResponse(booking));
     }
 
+    // Ajuste manual del precio desde el panel (solo admin).
+    @PatchMapping("/{id}/price")
+    public ResponseEntity<BookingResponse> adjustPrice(
+            @PathVariable Long id, @Valid @RequestBody PriceAdjustmentRequest request) {
+        Booking booking = bookingService.adjustPrice(id, request.getFinalPrice(), request.getNote());
+        return ResponseEntity.ok(toResponse(booking));
+    }
+
     // Convierte la entidad Booking (con sus relaciones) en el DTO plano
     // que se envía al frontend.
     private BookingResponse toResponse(Booking booking) {
@@ -74,7 +94,14 @@ public class BookingController {
                 .serviceType(booking.getServiceType())
                 .hamTypeName(booking.getHamType() != null ? booking.getHamType().getName() : null)
                 .status(booking.getStatus())
+                .localityName(booking.getLocalityName())
+                .distanceKm(booking.getDistanceKm())
+                .serviceCost(booking.getServiceCost())
+                .hamCost(booking.getHamCost())
+                .travelCost(booking.getTravelCost())
                 .estimatedPrice(booking.getEstimatedPrice())
+                .finalPrice(booking.getFinalPrice())
+                .priceNote(booking.getPriceNote())
                 .notes(booking.getNotes())
                 .createdAt(booking.getCreatedAt())
                 .build();

@@ -1,7 +1,6 @@
 package com.cortador.back.controller;
 
 import com.cortador.back.dto.response.HamTypeResponse;
-import com.cortador.back.model.HamType;
 import com.cortador.back.service.HamTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +12,9 @@ import java.util.List;
 
 /**
  * Catálogo público de tipos de jamón, de solo lectura. El formulario de
- * reserva lo usa para que el cliente elija uno en una reserva FULL_SERVICE.
+ * reserva lo usa para que el cliente elija uno en una reserva FULL_SERVICE,
+ * así que solo devuelve los que el cortador tiene activos. La gestión del
+ * catálogo está en AdminHamTypeController.
  */
 @RestController
 @RequestMapping("/api/ham-types")
@@ -24,19 +25,9 @@ public class HamTypeController {
 
     @GetMapping
     public ResponseEntity<List<HamTypeResponse>> getAll() {
-        List<HamTypeResponse> response = hamTypeService.findAll().stream()
-                .map(this::toResponse)
+        List<HamTypeResponse> response = hamTypeService.findAllActive().stream()
+                .map(HamTypeResponse::from)
                 .toList();
         return ResponseEntity.ok(response);
-    }
-
-    // Convierte la entidad HamType en el DTO que se envía al frontend.
-    private HamTypeResponse toResponse(HamType hamType) {
-        return HamTypeResponse.builder()
-                .id(hamType.getId())
-                .name(hamType.getName())
-                .description(hamType.getDescription())
-                .price(hamType.getPrice())
-                .build();
     }
 }

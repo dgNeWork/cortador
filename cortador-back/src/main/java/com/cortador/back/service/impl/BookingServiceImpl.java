@@ -5,16 +5,18 @@ import com.cortador.back.exception.InvalidBookingStateException;
 import com.cortador.back.exception.ResourceNotFoundException;
 import com.cortador.back.model.Booking;
 import com.cortador.back.model.Customer;
-import com.cortador.back.model.HamType;
 import com.cortador.back.model.enums.BookingStatus;
-import com.cortador.back.model.enums.ServiceType;
+import com.cortador.back.pricing.PriceBreakdown;
+import com.cortador.back.pricing.Quote;
+import com.cortador.back.pricing.QuoteService;
 import com.cortador.back.repository.BookingRepository;
 import com.cortador.back.service.BookingService;
 import com.cortador.back.service.CustomerService;
-import com.cortador.back.service.HamTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -30,24 +32,20 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final CustomerService customerService;
-    private final HamTypeService hamTypeService;
+    private final QuoteService quoteService;
 
     @Override
     public Booking create(BookingRequest request) {
-        // Regla de negocio: si el servicio es completo, hace falta elegir un jamón.
-        if (request.getServiceType() == ServiceType.FULL_SERVICE && request.getHamTypeId() == null) {
-            throw new IllegalArgumentException("A ham type must be selected for a full-service booking");
-        }
+        // Primero el presupuesto: además de calcular el precio, comprueba
+        // las reglas de negocio (jamón obligatorio en servicio completo,
+        // jamón activo, localidad válida). Va antes de tocar al cliente
+        // para no crear clientes a partir de reservas que se van a rechazar.
+        Quote quote = quoteService.quote(request);
+        PriceBreakdown price = quote.breakdown();
 
         // Buscamos el cliente por su email, o lo creamos si es la primera vez.
         Customer customer = customerService.findOrCreate(
                 request.getCustomerName(), request.getCustomerEmail(), request.getCustomerPhone());
-
-        // Si el cliente eligió un jamón, lo buscamos en la base de datos.
-        // Si no (corte solo), la reserva se queda sin jamón asociado.
-        HamType hamType = request.getHamTypeId() != null
-                ? hamTypeService.findById(request.getHamTypeId())
-                : null;
 
         Booking booking = Booking.builder()
                 .customer(customer)
@@ -58,8 +56,15 @@ public class BookingServiceImpl implements BookingService {
                 .guestCount(request.getGuestCount())
                 .location(request.getLocation())
                 .serviceType(request.getServiceType())
-                .hamType(hamType)
+                .hamType(quote.hamType())
                 .notes(request.getNotes())
+                // Copia del precio tal y como lo vio el cliente.
+                .localityName(quote.localityName())
+                .distanceKm(price.distanceKm())
+                .serviceCost(price.serviceCost())
+                .hamCost(price.hamCost())
+                .travelCost(price.travelCost())
+                .estimatedPrice(price.total())
                 .build();
 
         return bookingRepository.save(booking);
@@ -74,7 +79,7 @@ public class BookingServiceImpl implements BookingService {
     public Booking findById(Long id) {
         // Si no existe, lanzamos un error 404 en vez de devolver null.
         return bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna reserva con id " + id));
     }
 
     @Override
@@ -84,11 +89,28 @@ public class BookingServiceImpl implements BookingService {
         // No se puede cambiar el estado si ya está en uno definitivo
         // (CANCELLED o COMPLETED).
         if (TERMINAL_STATUSES.contains(booking.getStatus())) {
+            String closedAs = booking.getStatus() == BookingStatus.CANCELLED ? "cancelada" : "completada";
             throw new InvalidBookingStateException(
-                    "Booking " + id + " is already " + booking.getStatus() + " and cannot change status");
+                    "La reserva " + id + " ya está " + closedAs + " y no se puede cambiar de estado");
         }
 
         booking.setStatus(newStatus);
+        return bookingRepository.save(booking);
+    }
+
+    @Override
+    public Booking adjustPrice(Long id, BigDecimal finalPrice, String note) {
+        Booking booking = findById(id);
+
+        // Una reserva cancelada ya no se cobra: no tiene sentido cambiarle
+        // el precio. Las completadas sí, por si al final hubo una hora más.
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new InvalidBookingStateException(
+                    "La reserva " + id + " está cancelada y no se puede cambiar su precio");
+        }
+
+        booking.setFinalPrice(finalPrice.setScale(2, RoundingMode.HALF_UP));
+        booking.setPriceNote(note.trim());
         return bookingRepository.save(booking);
     }
 }

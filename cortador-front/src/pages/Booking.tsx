@@ -1,10 +1,15 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { createBooking, getHamTypes } from "../api/bookings";
+import { createBooking } from "../api/bookings";
+import { getHamTypes } from "../api/hamTypes";
 import { ApiError } from "../api/client";
+import { getPublicLocalities } from "../api/pricing";
 import { Field, inputClass } from "../components/FormField";
+import PriceSummary from "../components/PriceSummary";
+import { formatEuros } from "../format";
+import { useQuote } from "../hooks/useQuote";
 import { EVENT_TYPE_LABELS } from "../labels";
-import type { BookingResponse, EventType, HamType, ServiceType } from "../types";
+import type { BookingResponse, EventType, HamType, PublicLocalities, QuoteRequest, ServiceType } from "../types";
 
 // Todos los campos del formulario van como texto (string), aunque algunos
 // sean números o fechas: así es más fácil controlar los inputs de React,
@@ -21,6 +26,10 @@ interface FormState {
   location: string;
   serviceType: ServiceType;
   hamTypeId: string;
+  // Valor del desplegable de localidad: "HOME", "OTHER" o el id de una
+  // localidad de la lista del cortador ("" si aún no ha elegido).
+  locality: string;
+  otherLocalityName: string;
   notes: string;
 }
 
@@ -36,14 +45,47 @@ const initialState: FormState = {
   location: "",
   serviceType: "CUT_ONLY",
   hamTypeId: "",
+  locality: "",
+  otherLocalityName: "",
   notes: "",
 };
+
+type LocalityFields = Pick<QuoteRequest, "localityOption" | "localityId" | "otherLocalityName">;
+
+// Traduce lo elegido en el desplegable de localidad a los campos que
+// espera el backend. Devuelve null si todavía no ha elegido nada.
+function toLocalityFields(form: FormState): LocalityFields | null {
+  if (form.locality === "") return null;
+  if (form.locality === "HOME") return { localityOption: "HOME" };
+  if (form.locality === "OTHER") return { localityOption: "OTHER", otherLocalityName: form.otherLocalityName.trim() };
+  return { localityOption: "LISTED", localityId: Number(form.locality) };
+}
+
+// Datos para el presupuesto en vivo, o null si aún falta algo de lo que
+// depende el precio (así no se piden presupuestos que van a fallar).
+function toQuoteRequest(form: FormState): QuoteRequest | null {
+  const hours = Number(form.estimatedDurationHours);
+  const locality = toLocalityFields(form);
+  const needsHam = form.serviceType === "FULL_SERVICE";
+
+  if (!Number.isInteger(hours) || hours < 1 || !locality) return null;
+  if (needsHam && !form.hamTypeId) return null;
+  if (locality.localityOption === "OTHER" && !locality.otherLocalityName) return null;
+
+  return {
+    estimatedDurationHours: hours,
+    serviceType: form.serviceType,
+    hamTypeId: needsHam ? Number(form.hamTypeId) : undefined,
+    ...locality,
+  };
+}
 
 // Página con el formulario de reserva. Al enviarse con éxito, muestra la
 // pantalla de confirmación en vez del formulario.
 export default function Booking() {
   const [form, setForm] = useState<FormState>(initialState);
   const [hamTypes, setHamTypes] = useState<HamType[]>([]);
+  const [localities, setLocalities] = useState<PublicLocalities>({ homeLocality: null, localities: [] });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -55,7 +97,13 @@ export default function Booking() {
     getHamTypes()
       .then(setHamTypes)
       .catch(() => setHamTypes([]));
+    getPublicLocalities()
+      .then(setLocalities)
+      .catch(() => setLocalities({ homeLocality: null, localities: [] }));
   }, []);
+
+  // Precio en vivo: se recalcula cuando cambia algo de lo que depende.
+  const { quote, loading: quoteLoading, error: quoteError } = useQuote(toQuoteRequest(form));
 
   // Actualiza un solo campo del formulario sin tocar el resto.
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
@@ -66,6 +114,13 @@ export default function Booking() {
     event.preventDefault(); // evita que el navegador recargue la página
     setFormError(null);
     setFieldErrors({});
+
+    // El desplegable ya es obligatorio (required), pero por si acaso.
+    const locality = toLocalityFields(form);
+    if (!locality) {
+      setFieldErrors({ localityOption: "Elige la localidad del evento" });
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -85,6 +140,7 @@ export default function Booking() {
         hamTypeId: form.serviceType === "FULL_SERVICE" && form.hamTypeId
           ? Number(form.hamTypeId)
           : undefined,
+        ...locality,
         notes: form.notes || undefined,
       });
       setConfirmedBooking(booking);
@@ -222,7 +278,44 @@ export default function Booking() {
             </select>
           </Field>
 
-          <Field label="Ubicación" error={fieldErrors.location}>
+          {/* La localidad decide el desplazamiento; la dirección exacta
+              va aparte, en texto libre. */}
+          <Field label="Localidad del evento" error={fieldErrors.localityOption}>
+            <select
+              required
+              value={form.locality}
+              onChange={(e) => updateField("locality", e.target.value)}
+              className={inputClass}
+            >
+              <option value="" disabled>
+                Selecciona una localidad
+              </option>
+              {localities.homeLocality && (
+                <option value="HOME">{localities.homeLocality} (sin desplazamiento)</option>
+              )}
+              {localities.localities.map((locality) => (
+                <option key={locality.id} value={locality.id}>
+                  {locality.name}
+                </option>
+              ))}
+              <option value="OTHER">Otra localidad</option>
+            </select>
+          </Field>
+
+          {form.locality === "OTHER" && (
+            <Field label="¿Qué localidad?" error={fieldErrors.otherLocalityName}>
+              <input
+                required
+                type="text"
+                maxLength={100}
+                value={form.otherLocalityName}
+                onChange={(e) => updateField("otherLocalityName", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          )}
+
+          <Field label="Dirección del evento" error={fieldErrors.location}>
             <input
               required
               type="text"
@@ -275,7 +368,7 @@ export default function Booking() {
                     </option>
                     {hamTypes.map((hamType) => (
                       <option key={hamType.id} value={hamType.id}>
-                        {hamType.name} — {hamType.price.toFixed(2)}€
+                        {hamType.name} — {formatEuros(hamType.price)}
                       </option>
                     ))}
                   </select>
@@ -292,6 +385,11 @@ export default function Booking() {
               className={inputClass}
             />
           </Field>
+        </fieldset>
+
+        <fieldset className="space-y-4">
+          <legend className="font-display text-lg font-semibold text-ink">Precio</legend>
+          <PriceSummary quote={quote} loading={quoteLoading} error={quoteError} />
         </fieldset>
 
         <button
@@ -321,6 +419,12 @@ function BookingConfirmation({ booking }: { booking: BookingResponse }) {
       <p className="mt-3 text-ink-muted">
         Te hemos apuntado la reserva #{booking.id} para el {booking.eventDate} en{" "}
         {booking.location}. Te contactaremos a {booking.customerEmail} en cuanto la confirmemos.
+      </p>
+      <p className="mt-4 text-ink">
+        Precio:{" "}
+        <strong>
+          {booking.estimatedPrice !== null ? formatEuros(booking.estimatedPrice) : "a consultar"}
+        </strong>
       </p>
       <p className="mt-6 inline-block rounded-full bg-surface-alt px-4 py-1.5 text-sm font-medium text-ink-muted">
         Estado: pendiente de confirmación

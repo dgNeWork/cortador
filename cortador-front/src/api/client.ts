@@ -49,7 +49,7 @@ export async function apiFetch<T>(path: string, options?: ApiFetchOptions): Prom
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new ApiError(response.status, body?.message ?? "Request failed", body?.fieldErrors);
+    throw new ApiError(response.status, body?.message ?? "Ha ocurrido un error inesperado", body?.fieldErrors);
   }
 
   if (response.status === 204) {

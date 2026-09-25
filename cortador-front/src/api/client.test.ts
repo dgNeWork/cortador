@@ -29,7 +29,7 @@ describe("apiFetch", () => {
     const fakeFetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
-      json: async () => ({ message: "Customer email is required", fieldErrors: { customerEmail: "Customer email is required" } }),
+      json: async () => ({ message: "El email es obligatorio", fieldErrors: { customerEmail: "El email es obligatorio" } }),
     });
     vi.stubGlobal("fetch", fakeFetch);
 
@@ -37,7 +37,7 @@ describe("apiFetch", () => {
     // de tener que envolver el await en try/catch a mano.
     await expect(apiFetch("/bookings")).rejects.toMatchObject({
       status: 400,
-      message: "Customer email is required",
+      message: "El email es obligatorio",
     });
   });
 

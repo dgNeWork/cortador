@@ -87,7 +87,33 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
+    // ---- Precio ----
+    // Copia de la localidad y del desglose en el momento de reservar: si
+    // el cortador cambia después sus tarifas o borra la localidad, esta
+    // reserva sigue mostrando lo que se le dijo al cliente.
+
+    // Localidad del evento (la del cortador, una de su lista u otra que
+    // escribió el cliente).
+    private String localityName;
+
+    // Km del trayecto completo; null si la localidad no estaba en la lista.
+    private Integer distanceKm;
+
+    private BigDecimal serviceCost;
+
+    private BigDecimal hamCost;
+
+    private BigDecimal travelCost;
+
+    // Total calculado automáticamente; null si era "a consultar".
     private BigDecimal estimatedPrice;
+
+    // Precio que fija el cortador a mano (descuento, lo hablado por
+    // teléfono...). Si es null, vale el calculado.
+    private BigDecimal finalPrice;
+
+    // Motivo del ajuste de precio, para que quede constancia.
+    private String priceNote;
 
     @Column(length = 1000)
     private String notes;

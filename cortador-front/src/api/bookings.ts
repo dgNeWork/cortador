@@ -1,14 +1,25 @@
 import { apiFetch } from "./client";
-import type { BookingRequest, BookingResponse, BookingStatus, HamType } from "../types";
-
-// Pide al backend la lista de tipos de jamón disponibles.
-export function getHamTypes(): Promise<HamType[]> {
-  return apiFetch<HamType[]>("/ham-types");
-}
+import type {
+  BookingRequest,
+  BookingResponse,
+  BookingStatus,
+  PriceAdjustmentRequest,
+  Quote,
+  QuoteRequest,
+} from "../types";
 
 // Envía una reserva nueva al backend.
 export function createBooking(data: BookingRequest): Promise<BookingResponse> {
   return apiFetch<BookingResponse>("/bookings", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// Presupuesto en vivo mientras el cliente rellena el formulario. No
+// guarda nada: la reserva vuelve a calcular el mismo precio al enviarse.
+export function getQuote(data: QuoteRequest): Promise<Quote> {
+  return apiFetch<Quote>("/bookings/quote", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -26,6 +37,15 @@ export function updateBookingStatus(id: number, status: BookingStatus): Promise<
   return apiFetch<BookingResponse>(`/bookings/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+    auth: true,
+  });
+}
+
+// El cortador fija el precio final a mano, con un motivo.
+export function adjustBookingPrice(id: number, data: PriceAdjustmentRequest): Promise<BookingResponse> {
+  return apiFetch<BookingResponse>(`/bookings/${id}/price`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
     auth: true,
   });
 }

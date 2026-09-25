@@ -1,6 +1,14 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { siteConfig } from "../config/site";
+
+// Secciones del panel. Para añadir una nueva (por ejemplo "Tarifas"),
+// basta con añadirla aquí y crear su ruta en App.tsx.
+const ADMIN_SECTIONS = [
+  { to: "/admin", label: "Reservas" },
+  { to: "/admin/jamones", label: "Jamones" },
+  { to: "/admin/tarifas", label: "Tarifas" },
+];
 
 // Marco del panel del cortador. No lleva la cabecera ni el pie de la web
 // pública (no pintan nada aquí): solo una barra con el nombre del negocio,
@@ -30,6 +38,24 @@ export default function AdminLayout() {
             </button>
           </div>
         </div>
+        {/* Menú de secciones. "end" hace que "Reservas" (/admin) solo se
+            marque en /admin exacto y no también en /admin/jamones. */}
+        <nav aria-label="Secciones del panel" className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-6">
+          {ADMIN_SECTIONS.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end
+              className={({ isActive }) =>
+                `shrink-0 border-b-2 px-3 pb-2.5 pt-1 text-sm font-medium transition-colors ${
+                  isActive ? "border-brand-600 text-ink" : "border-transparent text-ink-muted hover:text-ink"
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
       </header>
       <main className="flex-1">
         <Outlet />
