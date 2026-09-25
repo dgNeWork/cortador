@@ -69,6 +69,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ham-types/**").permitAll()
+                        // /error es la ruta interna a la que Spring reenvía los
+                        // errores que no recoge GlobalExceptionHandler (por
+                        // ejemplo, un Content-Type no soportado). Si estuviera
+                        // protegida, cualquiera de esos errores en un endpoint
+                        // público acabaría en un 401 engañoso en vez de su
+                        // código real (400, 415...).
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

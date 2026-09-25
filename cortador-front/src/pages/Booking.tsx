@@ -2,15 +2,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { createBooking, getHamTypes } from "../api/bookings";
 import { ApiError } from "../api/client";
+import { Field, inputClass } from "../components/FormField";
+import { EVENT_TYPE_LABELS } from "../labels";
 import type { BookingResponse, EventType, HamType, ServiceType } from "../types";
-
-// Traduce cada valor del enum EventType a un texto legible en el select.
-const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  WEDDING: "Boda",
-  BIRTHDAY: "Cumpleaños",
-  CORPORATE: "Evento corporativo",
-  OTHER: "Otro",
-};
 
 // Todos los campos del formulario van como texto (string), aunque algunos
 // sean números o fechas: así es más fácil controlar los inputs de React,
@@ -335,26 +329,6 @@ function BookingConfirmation({ booking }: { booking: BookingResponse }) {
   );
 }
 
-// Envuelve un input con su etiqueta encima y el mensaje de error debajo
-// (si lo hay), para no repetir ese bloque en cada campo del formulario.
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-ink-muted">{label}</span>
-      <div className="mt-1">{children}</div>
-      {error && <span className="mt-1 block text-sm text-red-600">{error}</span>}
-    </label>
-  );
-}
-
 // Tarjeta seleccionable para elegir "Solo corte" o "Servicio completo".
 function ServiceOption({
   label,
@@ -382,7 +356,3 @@ function ServiceOption({
     </button>
   );
 }
-
-// Estilo común para todos los inputs, select y textarea del formulario.
-const inputClass =
-  "w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-ink outline-none transition-colors focus:border-brand-500";

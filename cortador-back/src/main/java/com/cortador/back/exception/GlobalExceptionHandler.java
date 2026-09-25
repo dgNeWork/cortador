@@ -2,6 +2,7 @@ package com.cortador.back.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -57,6 +58,17 @@ public class GlobalExceptionHandler {
             fieldErrors.put(error.getField(), error.getDefaultMessage());
         }
         return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed", fieldErrors);
+    }
+
+    /**
+     * El cuerpo de la petición no se puede leer: JSON mal formado, texto
+     * con una codificación incorrecta o un valor que no existe en un enum
+     * (por ejemplo eventType "PARTY"). Sin este manejador, Spring lo
+     * resolvía por su cuenta con una respuesta distinta al resto de la API.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "El cuerpo de la petición no es válido", null);
     }
 
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String message, Map<String, String> fieldErrors) {
