@@ -4,6 +4,3 @@
 .sonar/
 
 .DS_Store
-
-# Configuración local del editor, propia de cada máquina.
-.claude/

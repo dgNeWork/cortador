@@ -69,6 +69,13 @@ describe("AdminDashboard", () => {
     expect(screen.queryByText("Carlos Ruiz")).not.toBeInTheDocument();
   });
 
+  it("muestra la fecha del evento en español, con mayúscula solo al principio", async () => {
+    render(<AdminDashboard />);
+
+    // Marta (2026-10-03) es un sábado.
+    expect(await screen.findByText("Sábado, 3 de octubre de 2026")).toBeInTheDocument();
+  });
+
   it("las pestañas muestran cuántas reservas hay de cada estado", async () => {
     render(<AdminDashboard />);
 

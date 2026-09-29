@@ -19,17 +19,20 @@ const ACTION_BUTTON_CLASSES: Record<BookingAction["variant"], string> = {
 };
 
 // El backend manda la fecha como "2026-10-12". La convertimos en algo
-// más legible ("sábado, 12 de octubre de 2026"). Se construye la fecha
+// más legible ("Sábado, 12 de octubre de 2026"). Se construye la fecha
 // con año/mes/día por separado para que no se desplace un día por la
 // zona horaria.
 function formatEventDate(isoDate: string): string {
   const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("es-ES", {
+  const text = new Date(year, month - 1, day).toLocaleDateString("es-ES", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+  // Solo la primera letra en mayúscula. La clase CSS "capitalize" no
+  // sirve aquí: pone en mayúscula cada palabra ("10 De Octubre De").
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 interface BookingCardProps {
@@ -49,7 +52,7 @@ export default function BookingCard({ booking, updating, onAction, onAdjustPrice
     <article className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-display text-lg font-semibold capitalize text-ink">
+          <p className="font-display text-lg font-semibold text-ink">
             {formatEventDate(booking.eventDate)}
           </p>
           <p className="text-sm text-ink-muted">
