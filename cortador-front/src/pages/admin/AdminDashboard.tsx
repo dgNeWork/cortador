@@ -54,15 +54,17 @@ export default function AdminDashboard() {
   );
 
   // Primera carga al entrar en el panel ("loading" ya empieza en true).
+  // "void" indica que no esperamos la promesa a propósito: fetchBookings
+  // ya recoge sus errores en su propio .catch.
   useEffect(() => {
-    fetchBookings();
+    void fetchBookings();
   }, [fetchBookings]);
 
   // Botón "Actualizar": por si han entrado reservas nuevas mientras el
   // panel estaba abierto.
   function handleRefresh() {
     setLoading(true);
-    fetchBookings();
+    void fetchBookings(); // sus errores ya los recoge su .catch
   }
 
   // Cuántas reservas hay en cada estado, para mostrarlo en las pestañas.

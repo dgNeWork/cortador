@@ -26,7 +26,9 @@ export default function AdminLogin() {
 
     try {
       await login(email, password);
-      navigate("/admin", { replace: true });
+      // navigate puede devolver una promesa, pero no hay nada que esperar
+      // ni ningún error que recoger: "void" lo deja claro.
+      void navigate("/admin", { replace: true });
     } catch (err) {
       // 401 = credenciales incorrectas. Cualquier otro error suele ser
       // que el servidor no responde, y el mensaje debe dejarlo claro.
