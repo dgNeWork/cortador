@@ -6,14 +6,18 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getAvailability } from "../api/availability";
 import { createBooking, getQuote } from "../api/bookings";
 import { ApiError } from "../api/client";
 import { getHamTypes } from "../api/hamTypes";
 import { getPublicLocalities } from "../api/pricing";
+import { toIsoDate } from "../components/calendar/dates";
 import { siteConfig } from "../config/site";
+import { formatEventDate } from "../format";
 import type { BookingResponse, Quote } from "../types";
 import Booking from "./Booking";
 
+vi.mock("../api/availability", () => ({ getAvailability: vi.fn() }));
 vi.mock("../api/bookings", () => ({ createBooking: vi.fn(), getQuote: vi.fn() }));
 vi.mock("../api/hamTypes", () => ({ getHamTypes: vi.fn() }));
 vi.mock("../api/pricing", () => ({ getPublicLocalities: vi.fn() }));
@@ -33,6 +37,17 @@ const cadizQuote: Quote = {
   onRequest: false,
 };
 
+// El día 17 del mes que viene: siempre es futuro, y para llegar a él en
+// el calendario basta con pulsar "Mes siguiente" una vez.
+const now = new Date();
+const EVENT_DATE = toIsoDate(new Date(now.getFullYear(), now.getMonth() + 1, 17));
+
+// Pulsa un día del calendario del mes que viene.
+async function pickNextMonthDay(user: ReturnType<typeof userEvent.setup>, isoDate = EVENT_DATE) {
+  await user.click(screen.getByRole("button", { name: "Mes siguiente" }));
+  await user.click(await screen.findByRole("button", { name: new RegExp(`^${formatEventDate(isoDate)}:`) }));
+}
+
 // Lo que devuelve el backend al crear la solicitud de Lucía.
 const luciaBooking = {
   id: 12,
@@ -47,13 +62,15 @@ const luciaBooking = {
 type User = ReturnType<typeof userEvent.setup>;
 
 // Rellena el formulario completo como lo haría Lucía, sin enviarlo.
-async function fillForm(user: User, { chooseSlot = true } = {}) {
+async function fillForm(user: User, { chooseSlot = true, chooseDate = true } = {}) {
   await user.type(screen.getByLabelText("Nombre"), "Lucía Moreno");
   await user.type(screen.getByLabelText("Email"), "lucia@example.com");
   await user.type(screen.getByLabelText("Teléfono"), "611222333");
-  // Los campos de fecha y hora se rellenan de golpe: el navegador
-  // simulado no deja "teclearlos" carácter a carácter.
-  fireEvent.change(screen.getByLabelText("Fecha"), { target: { value: "2026-10-17" } });
+  if (chooseDate) {
+    await pickNextMonthDay(user);
+  }
+  // La hora se rellena de golpe: el navegador simulado no deja
+  // "teclearla" carácter a carácter.
   fireEvent.change(screen.getByLabelText("Hora"), { target: { value: "13:30" } });
   if (chooseSlot) {
     await user.click(screen.getByRole("button", { name: /Mañana\/tarde/ }));
@@ -68,6 +85,7 @@ async function fillForm(user: User, { chooseSlot = true } = {}) {
 describe("Formulario de reserva con precio (quoteMode = false)", () => {
   beforeEach(() => {
     siteConfig.quoteMode = false;
+    vi.mocked(getAvailability).mockResolvedValue([]);
     vi.mocked(getHamTypes).mockResolvedValue([]);
     vi.mocked(getPublicLocalities).mockResolvedValue({
       homeLocality: "Jerez de la Frontera",
@@ -158,6 +176,7 @@ describe("Formulario de reserva con precio (quoteMode = false)", () => {
 describe("Formulario en modo presupuesto (quoteMode = true)", () => {
   beforeEach(() => {
     siteConfig.quoteMode = true;
+    vi.mocked(getAvailability).mockResolvedValue([]);
     // Framer Motion llama a window.scrollTo al animar la apertura del
     // desplegable de jamones, y jsdom no lo implementa.
     vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -205,7 +224,7 @@ describe("Formulario en modo presupuesto (quoteMode = true)", () => {
     await user.click(screen.getByRole("button", { name: "Consultar presupuesto y disponibilidad" }));
 
     const dialog = screen.getByRole("dialog", { name: "Revisa tu solicitud" });
-    expect(within(dialog).getByText("Sábado, 17 de octubre de 2026")).toBeInTheDocument();
+    expect(within(dialog).getByText(formatEventDate(EVENT_DATE))).toBeInTheDocument();
     expect(within(dialog).getByText("Mañana/tarde")).toBeInTheDocument();
     expect(within(dialog).getByText("Cádiz")).toBeInTheDocument();
 
@@ -242,5 +261,49 @@ describe("Formulario en modo presupuesto (quoteMode = true)", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Esa franja ya no está disponible");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("si no se elige día, avisa en vez de abrir la ventana", async () => {
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    await fillForm(user, { chooseDate: false });
+    await user.click(screen.getByRole("button", { name: "Consultar presupuesto y disponibilidad" }));
+
+    expect(screen.getByText("Elige el día en el calendario")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("el calendario no deja elegir días pasados ni completos, y desactiva la franja ocupada", async () => {
+    const fullDay = toIsoDate(new Date(now.getFullYear(), now.getMonth() + 1, 18));
+    vi.mocked(getAvailability).mockResolvedValue([
+      { date: EVENT_DATE, occupied: "MIDDAY" },
+      { date: fullDay, occupied: "FULL_DAY" },
+    ]);
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    // Ayer (si es de este mes) no se puede pulsar.
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (yesterday.getMonth() === now.getMonth()) {
+      expect(screen.getByRole("button", { name: new RegExp(`^${formatEventDate(toIsoDate(yesterday))}:`) })).toBeDisabled();
+    }
+
+    await user.click(screen.getByRole("button", { name: "Mes siguiente" }));
+    expect(
+      await screen.findByRole("button", { name: `${formatEventDate(fullDay)}: día completo ocupado` }),
+    ).toBeDisabled();
+
+    // Con mañana/tarde elegida, al pulsar un día con esa franja ocupada,
+    // la franja se quita y su tarjeta queda desactivada.
+    await user.click(screen.getByRole("button", { name: /Mañana\/tarde/ }));
+    await user.click(screen.getByRole("button", { name: `${formatEventDate(EVENT_DATE)}: mañana/tarde ocupada` }));
+
+    const middayCard = screen.getByRole("button", { name: /Mañana\/tarde/ });
+    expect(middayCard).toBeDisabled();
+    expect(middayCard).toHaveAttribute("aria-pressed", "false");
+    expect(middayCard).toHaveTextContent("Ocupada ese día");
+    expect(screen.getByRole("button", { name: /Tarde\/noche/ })).toBeEnabled();
+    expect(screen.getByText(`Has elegido: ${formatEventDate(EVENT_DATE)}`)).toBeInTheDocument();
   });
 });

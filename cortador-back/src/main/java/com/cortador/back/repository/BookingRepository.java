@@ -15,4 +15,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Reservas de un día en un estado concreto. Lo usa AvailabilityService
     // para saber qué franjas están ocupadas por reservas confirmadas.
     List<Booking> findByEventDateAndStatus(LocalDate eventDate, BookingStatus status);
+
+    // Reservas de un periodo en un estado concreto, para pintar el calendario.
+    List<Booking> findByEventDateBetweenAndStatus(LocalDate from, LocalDate to, BookingStatus status);
 }

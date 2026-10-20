@@ -15,6 +15,44 @@ export type TimeSlot = "MIDDAY" | "EVENING";
 
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
 
+// Qué parte de un día está ocupada en el calendario.
+export type SlotCoverage = "NONE" | "MIDDAY" | "EVENING" | "FULL_DAY";
+
+// Día ocupado del calendario público (fecha "yyyy-MM-dd").
+export interface PublicDayAvailability {
+  date: string;
+  occupied: SlotCoverage;
+}
+
+// Día del calendario del panel, con el porqué: reservas confirmadas,
+// marca del cortador (null si no hay) y lo que bloquea su marca o sus reglas.
+export interface AdminDayAvailability {
+  date: string;
+  booked: SlotCoverage;
+  mark: SlotCoverage | null;
+  blocked: SlotCoverage;
+  occupied: SlotCoverage;
+}
+
+export type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+// Regla habitual de no disponibilidad. Las fechas son opcionales (null =
+// sin límite por ese lado).
+export interface AvailabilityRule {
+  id: number;
+  daysOfWeek: DayOfWeek[];
+  coverage: SlotCoverage;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface AvailabilityRuleRequest {
+  daysOfWeek: DayOfWeek[];
+  coverage: SlotCoverage;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface HamType {
   id: number;
   name: string;

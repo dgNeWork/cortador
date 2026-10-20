@@ -1,15 +1,21 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { getAvailability } from "../api/availability";
 import { createBooking } from "../api/bookings";
 import { getHamTypes } from "../api/hamTypes";
 import { ApiError } from "../api/client";
 import { getPublicLocalities } from "../api/pricing";
+import CalendarLegend from "../components/calendar/CalendarLegend";
+import { coversSlot } from "../components/calendar/coverage";
+import { monthOf, todayIso } from "../components/calendar/dates";
+import MonthCalendar from "../components/calendar/MonthCalendar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { Field, inputClass } from "../components/FormField";
 import PriceSummary from "../components/PriceSummary";
 import { getBookingTexts } from "../config/bookingTexts";
 import { siteConfig } from "../config/site";
 import { formatEuros, formatEventDate } from "../format";
+import { useMonthAvailability } from "../hooks/useMonthAvailability";
 import { useQuote } from "../hooks/useQuote";
 import { EVENT_TYPE_LABELS, SERVICE_TYPE_LABELS, TIME_SLOT_LABELS } from "../labels";
 import type {
@@ -19,6 +25,7 @@ import type {
   PublicLocalities,
   QuoteRequest,
   ServiceType,
+  SlotCoverage,
   TimeSlot,
 } from "../types";
 
@@ -119,6 +126,11 @@ export default function Booking() {
   const [confirmedBooking, setConfirmedBooking] = useState<BookingResponse | null>(null);
   // true mientras está abierta la ventana de revisión de la solicitud.
   const [reviewing, setReviewing] = useState(false);
+  // Mes que se ve en el calendario (empieza en el actual) y lo ocupado
+  // del día elegido, para desactivar la franja que ya no está libre.
+  const [calendarMonth, setCalendarMonth] = useState(() => monthOf(todayIso()));
+  const [dateCoverage, setDateCoverage] = useState<SlotCoverage>("NONE");
+  const { occupancy, error: calendarError } = useMonthAvailability(getAvailability, calendarMonth);
 
   // Al cargar la página, pedimos los tipos de jamón para el desplegable.
   // Si falla, dejamos la lista vacía en vez de romper la página.
@@ -140,6 +152,18 @@ export default function Booking() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Al elegir un día en el calendario: si la franja que ya tenía elegida
+  // está ocupada ese día, se quita para que elija la otra.
+  function handleSelectDate(isoDate: string) {
+    const coverage = occupancy[isoDate] ?? "NONE";
+    setDateCoverage(coverage);
+    setForm((prev) => ({
+      ...prev,
+      eventDate: isoDate,
+      timeSlot: prev.timeSlot && coversSlot(coverage, prev.timeSlot) ? "" : prev.timeSlot,
+    }));
+  }
+
   // Primer paso al pulsar el botón: el navegador ya ha comprobado los
   // campos obligatorios; aquí se comprueba lo que él no puede (las
   // tarjetas de franja no son un input) y se abre la ventana de revisión.
@@ -148,6 +172,10 @@ export default function Booking() {
     setFormError(null);
     setFieldErrors({});
 
+    if (!form.eventDate) {
+      setFieldErrors({ eventDate: "Elige el día en el calendario" });
+      return;
+    }
     // El desplegable ya es obligatorio (required), pero por si acaso.
     if (!toLocalityFields(form)) {
       setFieldErrors({ localityOption: "Elige la localidad del evento" });
@@ -259,17 +287,54 @@ export default function Booking() {
             Detalles del evento
           </legend>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Fecha" error={fieldErrors.eventDate}>
-              <input
-                required
-                type="date"
-                value={form.eventDate}
-                onChange={(e) => updateField("eventDate", e.target.value)}
-                className={inputClass}
+          {/* Calendario: los días pasados y los completos no se pueden
+              elegir; el cliente solo ve qué está ocupado, nunca de quién. */}
+          <div>
+            <span className="text-sm font-medium text-ink-muted">Fecha del evento</span>
+            <div className="mt-1 space-y-3">
+              <MonthCalendar
+                month={calendarMonth}
+                onMonthChange={setCalendarMonth}
+                occupancy={occupancy}
+                selectedDate={form.eventDate || null}
+                onSelectDate={handleSelectDate}
+                isDayDisabled={(isoDate, coverage) => isoDate < todayIso() || coverage === "FULL_DAY"}
+                allowPastMonths={false}
               />
-            </Field>
+              <CalendarLegend />
+              {calendarError && <p className="text-sm text-red-600">{calendarError}</p>}
+              <p className="text-sm text-ink">
+                {form.eventDate ? `Has elegido: ${formatEventDate(form.eventDate)}` : "Elige un día en el calendario."}
+              </p>
+            </div>
+            {fieldErrors.eventDate && <span className="mt-1 block text-sm text-red-600">{fieldErrors.eventDate}</span>}
+          </div>
 
+          {/* Franja: dos tarjetas en vez de un desplegable, para que se vean
+              las dos opciones de un vistazo. Sin horas: así lo entiende
+              cualquier cliente. La que ya está ocupada ese día sale desactivada. */}
+          <div>
+            <span className="text-sm font-medium text-ink-muted">Franja del evento</span>
+            <div className="mt-1 grid gap-3 sm:grid-cols-2">
+              <OptionCard
+                label={TIME_SLOT_LABELS.MIDDAY}
+                description={coversSlot(dateCoverage, "MIDDAY") ? "Ocupada ese día" : "Comidas y eventos de mediodía"}
+                selected={form.timeSlot === "MIDDAY"}
+                disabled={coversSlot(dateCoverage, "MIDDAY")}
+                onSelect={() => updateField("timeSlot", "MIDDAY")}
+              />
+              <OptionCard
+                label={TIME_SLOT_LABELS.EVENING}
+                description={coversSlot(dateCoverage, "EVENING") ? "Ocupada ese día" : "Cenas y eventos de noche"}
+                selected={form.timeSlot === "EVENING"}
+                disabled={coversSlot(dateCoverage, "EVENING")}
+                onSelect={() => updateField("timeSlot", "EVENING")}
+              />
+            </div>
+            {fieldErrors.timeSlot && <span className="mt-1 block text-sm text-red-600">{fieldErrors.timeSlot}</span>}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Hora" error={fieldErrors.eventTime}>
               <input
                 required
@@ -301,28 +366,6 @@ export default function Booking() {
                 className={inputClass}
               />
             </Field>
-          </div>
-
-          {/* Franja: dos tarjetas en vez de un desplegable, para que se vean
-              las dos opciones de un vistazo. Sin horas: así lo entiende
-              cualquier cliente. */}
-          <div>
-            <span className="text-sm font-medium text-ink-muted">Franja del evento</span>
-            <div className="mt-1 grid gap-3 sm:grid-cols-2">
-              <OptionCard
-                label={TIME_SLOT_LABELS.MIDDAY}
-                description="Comidas y eventos de mediodía"
-                selected={form.timeSlot === "MIDDAY"}
-                onSelect={() => updateField("timeSlot", "MIDDAY")}
-              />
-              <OptionCard
-                label={TIME_SLOT_LABELS.EVENING}
-                description="Cenas y eventos de noche"
-                selected={form.timeSlot === "EVENING"}
-                onSelect={() => updateField("timeSlot", "EVENING")}
-              />
-            </div>
-            {fieldErrors.timeSlot && <span className="mt-1 block text-sm text-red-600">{fieldErrors.timeSlot}</span>}
           </div>
 
           <Field label="Tipo de evento" error={fieldErrors.eventType}>
@@ -572,19 +615,22 @@ function OptionCard({
   label,
   description,
   selected,
+  disabled = false,
   onSelect,
 }: {
   label: string;
   description: string;
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={disabled}
       aria-pressed={selected}
-      className={`rounded-xl border px-5 py-4 text-left transition-colors ${
+      className={`rounded-xl border px-5 py-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         selected
           ? "border-brand-600 bg-brand-600/5"
           : "border-border bg-surface hover:border-brand-400"

@@ -6,6 +6,7 @@ import { siteConfig } from "../config/site";
 // basta con añadirla aquí y crear su ruta en App.tsx.
 const ADMIN_SECTIONS = [
   { to: "/admin", label: "Reservas" },
+  { to: "/admin/calendario", label: "Calendario" },
   { to: "/admin/jamones", label: "Jamones" },
   { to: "/admin/tarifas", label: "Tarifas" },
 ];

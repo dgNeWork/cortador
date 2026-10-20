@@ -39,9 +39,10 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Booking create(BookingRequest request) {
-        // Lo primero, que la franja siga libre: si alguien la ha ocupado
-        // mientras el cliente rellenaba el formulario, no seguimos.
-        if (availabilityService.isTakenByConfirmedBooking(request.getEventDate(), request.getTimeSlot(), null)) {
+        // Lo primero, que la franja siga libre: ni reservada ni bloqueada por
+        // el cortador (alguien puede haberla ocupado mientras el cliente
+        // rellenaba el formulario). Si no, no seguimos.
+        if (!availabilityService.isAvailableForRequest(request.getEventDate(), request.getTimeSlot())) {
             throw new SlotUnavailableException("Esa franja ya no está disponible ese día. Elige otro día u otra franja.");
         }
 

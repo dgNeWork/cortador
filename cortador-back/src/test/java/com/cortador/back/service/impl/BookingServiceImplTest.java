@@ -95,8 +95,8 @@ class BookingServiceImplTest {
     @Test
     void create_siLaFranjaYaEstaOcupada_lanzaSlotUnavailableExceptionYNoGuardaNada() {
         BookingRequest request = buildValidRequest(ServiceType.CUT_ONLY, null);
-        when(availabilityService.isTakenByConfirmedBooking(request.getEventDate(), TimeSlot.MIDDAY, null))
-                .thenReturn(true);
+        when(availabilityService.isAvailableForRequest(request.getEventDate(), TimeSlot.MIDDAY))
+                .thenReturn(false);
 
         assertThatThrownBy(() -> bookingService.create(request))
                 .isInstanceOf(SlotUnavailableException.class)
@@ -109,6 +109,7 @@ class BookingServiceImplTest {
     @Test
     void create_siElPresupuestoRechazaLosDatos_noCreaNiElClienteNiLaReserva() {
         BookingRequest request = buildValidRequest(ServiceType.FULL_SERVICE, null);
+        when(availabilityService.isAvailableForRequest(request.getEventDate(), TimeSlot.MIDDAY)).thenReturn(true);
         when(quoteService.quote(request))
                 .thenThrow(new IllegalArgumentException("Para el servicio completo hay que elegir un jamón"));
 
@@ -126,6 +127,7 @@ class BookingServiceImplTest {
         PriceBreakdown price = new PriceBreakdown(new BigDecimal("50.00"), 2, new BigDecimal("100.00"),
                 new BigDecimal("390.00"), new BigDecimal("0.40"), 70, new BigDecimal("28.00"),
                 new BigDecimal("518.00"), false);
+        when(availabilityService.isAvailableForRequest(request.getEventDate(), TimeSlot.MIDDAY)).thenReturn(true);
         when(quoteService.quote(request)).thenReturn(new Quote(bellota, "Cádiz", price));
         when(customerService.findOrCreate(customer.getName(), customer.getEmail(), customer.getPhone()))
                 .thenReturn(customer);

@@ -5,6 +5,16 @@
 // detectaría ningún otro test.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearSession, saveSession } from "../auth/session";
+import {
+  clearDayMark,
+  createAvailabilityRule,
+  deleteAvailabilityRule,
+  getAdminAvailability,
+  getAvailability,
+  getAvailabilityRules,
+  setDayMark,
+  updateAvailabilityRule,
+} from "./availability";
 import { adjustBookingPrice, createBooking, getBookings, getQuote, updateBookingStatus } from "./bookings";
 import { createHamType, getAdminHamTypes, getHamTypes, updateHamType } from "./hamTypes";
 import {
@@ -34,6 +44,14 @@ const cases: { name: string; call: () => Promise<unknown>; path: string; method:
   { name: "getLocalities", call: () => getLocalities(), path: "/admin/localities", method: "GET", auth: true },
   { name: "createLocality", call: () => createLocality({ name: "Cádiz", distanceKm: 70 }), path: "/admin/localities", method: "POST", auth: true },
   { name: "updateLocality", call: () => updateLocality(4, { name: "Cádiz", distanceKm: 70 }), path: "/admin/localities/4", method: "PUT", auth: true },
+  { name: "getAvailability", call: () => getAvailability("2027-03-01", "2027-03-31"), path: "/availability\\?from=2027-03-01&to=2027-03-31", method: "GET", auth: false },
+  { name: "getAdminAvailability", call: () => getAdminAvailability("2027-03-01", "2027-03-31"), path: "/admin/availability\\?from=2027-03-01&to=2027-03-31", method: "GET", auth: true },
+  { name: "setDayMark", call: () => setDayMark("2027-03-13", "EVENING"), path: "/admin/day-marks/2027-03-13", method: "PUT", auth: true },
+  { name: "clearDayMark", call: () => clearDayMark("2027-03-13"), path: "/admin/day-marks/2027-03-13", method: "DELETE", auth: true },
+  { name: "getAvailabilityRules", call: () => getAvailabilityRules(), path: "/admin/availability-rules", method: "GET", auth: true },
+  { name: "createAvailabilityRule", call: () => createAvailabilityRule({ daysOfWeek: ["MONDAY"], coverage: "FULL_DAY" }), path: "/admin/availability-rules", method: "POST", auth: true },
+  { name: "updateAvailabilityRule", call: () => updateAvailabilityRule(3, { daysOfWeek: ["MONDAY"], coverage: "FULL_DAY" }), path: "/admin/availability-rules/3", method: "PUT", auth: true },
+  { name: "deleteAvailabilityRule", call: () => deleteAvailabilityRule(3), path: "/admin/availability-rules/3", method: "DELETE", auth: true },
   { name: "deleteLocality", call: () => deleteLocality(4), path: "/admin/localities/4", method: "DELETE", auth: true },
 ];
 

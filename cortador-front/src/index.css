@@ -23,6 +23,13 @@
   --color-brand-500: #a97c3f;
   --color-brand-600: #8a5a2b;
   --color-brand-700: #6b4520;
+
+  /* Colores del calendario de disponibilidad (leyenda): ámbar para la
+     franja de mañana/tarde (el sol), azul para la de tarde/noche y
+     granate para el día completo. */
+  --color-slot-midday: #f2b84b;
+  --color-slot-evening: #5b7fbd;
+  --color-slot-full: #7a2a2a;
 }
 
 body {
