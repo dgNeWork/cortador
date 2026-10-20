@@ -1,4 +1,4 @@
-import type { BookingStatus, EventType, ServiceType } from "./types";
+import type { BookingStatus, EventType, ServiceType, TimeSlot } from "./types";
 
 // Textos en español para los valores de los enums del backend. Están en
 // un solo archivo porque los usan tanto el formulario de reserva como el
@@ -14,6 +14,11 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   CUT_ONLY: "Solo corte",
   FULL_SERVICE: "Servicio completo",
+};
+
+export const TIME_SLOT_LABELS: Record<TimeSlot, string> = {
+  MIDDAY: "Mañana/tarde",
+  EVENING: "Tarde/noche",
 };
 
 export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {

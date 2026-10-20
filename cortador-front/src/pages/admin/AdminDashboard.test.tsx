@@ -24,6 +24,7 @@ function makeBooking(overrides: Partial<BookingResponse>): BookingResponse {
     customerPhone: "+34 600 000 000",
     eventDate: "2026-10-17",
     eventTime: "13:30:00",
+    timeSlot: "MIDDAY",
     estimatedDurationHours: 3,
     eventType: "WEDDING",
     guestCount: 100,

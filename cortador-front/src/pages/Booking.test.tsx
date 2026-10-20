@@ -1,13 +1,16 @@
-// Tests del formulario público de reserva, centrados en lo nuevo: el
-// desplegable de localidad, el precio en vivo y lo que se envía al backend.
+// Tests del formulario público de reserva: la franja, la ventana de
+// revisión antes de enviar y lo que se manda al backend, en los dos modos
+// de la web (con precio en vivo y modo presupuesto, sin precios).
 // Todas las llamadas a la API son mocks (vi.mock), así que no hace falta
 // el backend arrancado.
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBooking, getQuote } from "../api/bookings";
+import { ApiError } from "../api/client";
 import { getHamTypes } from "../api/hamTypes";
 import { getPublicLocalities } from "../api/pricing";
+import { siteConfig } from "../config/site";
 import type { BookingResponse, Quote } from "../types";
 import Booking from "./Booking";
 
@@ -30,8 +33,41 @@ const cadizQuote: Quote = {
   onRequest: false,
 };
 
-describe("Formulario de reserva", () => {
+// Lo que devuelve el backend al crear la solicitud de Lucía.
+const luciaBooking = {
+  id: 12,
+  customerName: "Lucía Moreno",
+  customerEmail: "lucia@example.com",
+  eventDate: "2026-10-17",
+  timeSlot: "MIDDAY",
+  location: "Finca Los Olivos",
+  estimatedPrice: 178,
+} as BookingResponse;
+
+type User = ReturnType<typeof userEvent.setup>;
+
+// Rellena el formulario completo como lo haría Lucía, sin enviarlo.
+async function fillForm(user: User, { chooseSlot = true } = {}) {
+  await user.type(screen.getByLabelText("Nombre"), "Lucía Moreno");
+  await user.type(screen.getByLabelText("Email"), "lucia@example.com");
+  await user.type(screen.getByLabelText("Teléfono"), "611222333");
+  // Los campos de fecha y hora se rellenan de golpe: el navegador
+  // simulado no deja "teclearlos" carácter a carácter.
+  fireEvent.change(screen.getByLabelText("Fecha"), { target: { value: "2026-10-17" } });
+  fireEvent.change(screen.getByLabelText("Hora"), { target: { value: "13:30" } });
+  if (chooseSlot) {
+    await user.click(screen.getByRole("button", { name: /Mañana\/tarde/ }));
+  }
+  await user.type(screen.getByLabelText("Duración estimada (horas)"), "3");
+  await user.type(screen.getByLabelText("Número de invitados"), "120");
+  await within(screen.getByLabelText("Localidad del evento")).findByRole("option", { name: "Cádiz" });
+  await user.selectOptions(screen.getByLabelText("Localidad del evento"), "Cádiz");
+  await user.type(screen.getByLabelText("Dirección del evento"), "Finca Los Olivos");
+}
+
+describe("Formulario de reserva con precio (quoteMode = false)", () => {
   beforeEach(() => {
+    siteConfig.quoteMode = false;
     vi.mocked(getHamTypes).mockResolvedValue([]);
     vi.mocked(getPublicLocalities).mockResolvedValue({
       homeLocality: "Jerez de la Frontera",
@@ -40,6 +76,7 @@ describe("Formulario de reserva", () => {
   });
 
   afterEach(() => {
+    siteConfig.quoteMode = true;
     vi.clearAllMocks();
   });
 
@@ -100,37 +137,110 @@ describe("Formulario de reserva", () => {
     expect(getQuote).not.toHaveBeenCalled();
   });
 
-  it("al enviar, manda la localidad elegida y muestra el precio en la confirmación", async () => {
+  it("al confirmar en la ventana, manda la localidad y la franja y muestra el precio", async () => {
     vi.mocked(getQuote).mockResolvedValue(cadizQuote);
-    vi.mocked(createBooking).mockResolvedValue({
-      id: 12,
-      customerName: "Lucía Moreno",
-      customerEmail: "lucia@example.com",
-      eventDate: "2026-10-17",
-      location: "Finca Los Olivos",
-      estimatedPrice: 178,
-    } as BookingResponse);
+    vi.mocked(createBooking).mockResolvedValue(luciaBooking);
     const user = userEvent.setup();
     render(<Booking />);
 
-    await user.type(screen.getByLabelText("Nombre"), "Lucía Moreno");
-    await user.type(screen.getByLabelText("Email"), "lucia@example.com");
-    await user.type(screen.getByLabelText("Teléfono"), "611222333");
-    // Los campos de fecha y hora se rellenan de golpe: el navegador
-    // simulado no deja "teclearlos" carácter a carácter.
-    fireEvent.change(screen.getByLabelText("Fecha"), { target: { value: "2026-10-17" } });
-    fireEvent.change(screen.getByLabelText("Hora"), { target: { value: "13:30" } });
-    await user.type(screen.getByLabelText("Duración estimada (horas)"), "3");
-    await user.type(screen.getByLabelText("Número de invitados"), "120");
-    await within(screen.getByLabelText("Localidad del evento")).findByRole("option", { name: "Cádiz" });
-    await user.selectOptions(screen.getByLabelText("Localidad del evento"), "Cádiz");
-    await user.type(screen.getByLabelText("Dirección del evento"), "Finca Los Olivos");
+    await fillForm(user);
     await user.click(screen.getByRole("button", { name: "Enviar solicitud" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar solicitud" }));
 
     expect(createBooking).toHaveBeenCalledWith(
-      expect.objectContaining({ localityOption: "LISTED", localityId: 4, estimatedDurationHours: 3 }),
+      expect.objectContaining({ localityOption: "LISTED", localityId: 4, estimatedDurationHours: 3, timeSlot: "MIDDAY" }),
     );
     expect(await screen.findByText(/Solicitud recibida, Lucía/)).toBeInTheDocument();
     expect(screen.getByText(/178,00/)).toBeInTheDocument();
+  });
+});
+
+describe("Formulario en modo presupuesto (quoteMode = true)", () => {
+  beforeEach(() => {
+    siteConfig.quoteMode = true;
+    // Framer Motion llama a window.scrollTo al animar la apertura del
+    // desplegable de jamones, y jsdom no lo implementa.
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.mocked(getHamTypes).mockResolvedValue([{ id: 2, name: "Bellota", description: null, price: 390, active: true }]);
+    vi.mocked(getPublicLocalities).mockResolvedValue({
+      homeLocality: "Jerez de la Frontera",
+      localities: [{ id: 4, name: "Cádiz", distanceKm: 70 }],
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it("no muestra ningún precio ni lo pide, salvo el de los jamones", async () => {
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    expect(screen.getByRole("heading", { name: "Solicitar presupuesto" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Servicio completo/ }));
+    expect(await screen.findByRole("option", { name: /Bellota — 390,00/ })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Duración estimada (horas)"), "3");
+
+    expect(screen.queryByText("Precio")).not.toBeInTheDocument();
+    expect(getQuote).not.toHaveBeenCalled();
+  });
+
+  it("si no se elige franja, avisa en vez de abrir la ventana", async () => {
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    await fillForm(user, { chooseSlot: false });
+    await user.click(screen.getByRole("button", { name: "Consultar presupuesto y disponibilidad" }));
+
+    expect(screen.getByText("Elige la franja del evento")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("la ventana resume los datos y 'Corregir' la cierra sin enviar nada", async () => {
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    await fillForm(user);
+    await user.click(screen.getByRole("button", { name: "Consultar presupuesto y disponibilidad" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Revisa tu solicitud" });
+    expect(within(dialog).getByText("Sábado, 17 de octubre de 2026")).toBeInTheDocument();
+    expect(within(dialog).getByText("Mañana/tarde")).toBeInTheDocument();
+    expect(within(dialog).getByText("Cádiz")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Corregir" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(createBooking).not.toHaveBeenCalled();
+  });
+
+  it("al confirmar, envía la solicitud y la confirmación no lleva precio", async () => {
+    vi.mocked(createBooking).mockResolvedValue(luciaBooking);
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    await fillForm(user);
+    await user.click(screen.getByRole("button", { name: "Consultar presupuesto y disponibilidad" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar solicitud" }));
+
+    expect(await screen.findByText(/Solicitud recibida, Lucía/)).toBeInTheDocument();
+    expect(screen.getByText(/por la mañana\/tarde/)).toBeInTheDocument();
+    expect(screen.queryByText(/Precio/)).not.toBeInTheDocument();
+  });
+
+  it("si la franja se ha ocupado mientras tanto, cierra la ventana y muestra el aviso del backend", async () => {
+    vi.mocked(createBooking).mockRejectedValue(
+      new ApiError(409, "Esa franja ya no está disponible ese día. Elige otro día u otra franja."),
+    );
+    const user = userEvent.setup();
+    render(<Booking />);
+
+    await fillForm(user);
+    await user.click(screen.getByRole("button", { name: "Consultar presupuesto y disponibilidad" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar solicitud" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Esa franja ya no está disponible");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

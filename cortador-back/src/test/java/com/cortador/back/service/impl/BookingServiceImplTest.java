@@ -1,8 +1,10 @@
 package com.cortador.back.service.impl;
 
+import com.cortador.back.availability.AvailabilityService;
 import com.cortador.back.dto.request.BookingRequest;
 import com.cortador.back.exception.InvalidBookingStateException;
 import com.cortador.back.exception.ResourceNotFoundException;
+import com.cortador.back.exception.SlotUnavailableException;
 import com.cortador.back.model.Booking;
 import com.cortador.back.model.Customer;
 import com.cortador.back.model.HamType;
@@ -10,6 +12,7 @@ import com.cortador.back.model.enums.BookingStatus;
 import com.cortador.back.model.enums.EventType;
 import com.cortador.back.model.enums.LocalityOption;
 import com.cortador.back.model.enums.ServiceType;
+import com.cortador.back.model.enums.TimeSlot;
 import com.cortador.back.pricing.PriceBreakdown;
 import com.cortador.back.pricing.Quote;
 import com.cortador.back.pricing.QuoteService;
@@ -36,7 +39,8 @@ import static org.mockito.Mockito.when;
 
 /**
  * Aquí probamos las reglas de BookingServiceImpl. Usamos @Mock para sus
- * tres dependencias (repositorio, clientes y presupuestos) e @InjectMocks
+ * cuatro dependencias (repositorio, clientes, presupuestos y
+ * disponibilidad) e @InjectMocks
  * para que Mockito construya BookingServiceImpl metiéndole esos mocks por
  * el constructor automáticamente (no hace falta escribir "new BookingServiceImpl(...)").
  *
@@ -56,6 +60,9 @@ class BookingServiceImplTest {
     @Mock
     private QuoteService quoteService;
 
+    @Mock
+    private AvailabilityService availabilityService;
+
     @InjectMocks
     private BookingServiceImpl bookingService;
 
@@ -73,6 +80,7 @@ class BookingServiceImplTest {
         request.setCustomerPhone(customer.getPhone());
         request.setEventDate(LocalDate.now().plusDays(30));
         request.setEventTime(LocalTime.of(13, 0));
+        request.setTimeSlot(TimeSlot.MIDDAY);
         request.setEstimatedDurationHours(2);
         request.setEventType(EventType.WEDDING);
         request.setGuestCount(80);
@@ -82,6 +90,20 @@ class BookingServiceImplTest {
         request.setLocalityOption(LocalityOption.LISTED);
         request.setLocalityId(4L);
         return request;
+    }
+
+    @Test
+    void create_siLaFranjaYaEstaOcupada_lanzaSlotUnavailableExceptionYNoGuardaNada() {
+        BookingRequest request = buildValidRequest(ServiceType.CUT_ONLY, null);
+        when(availabilityService.isTakenByConfirmedBooking(request.getEventDate(), TimeSlot.MIDDAY, null))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> bookingService.create(request))
+                .isInstanceOf(SlotUnavailableException.class)
+                .hasMessageContaining("ya no está disponible");
+
+        verify(customerService, never()).findOrCreate(any(), any(), any());
+        verify(bookingRepository, never()).save(any());
     }
 
     @Test
@@ -148,7 +170,9 @@ class BookingServiceImplTest {
 
     @Test
     void updateStatus_reservaPendiente_cambiaAConfirmedYLaGuarda() {
-        Booking pendingBooking = Booking.builder().id(6L).status(BookingStatus.PENDING).build();
+        Booking pendingBooking = Booking.builder().id(6L).status(BookingStatus.PENDING)
+                .eventDate(LocalDate.now().plusDays(30)).eventTime(LocalTime.of(13, 0))
+                .timeSlot(TimeSlot.MIDDAY).build();
         when(bookingRepository.findById(6L)).thenReturn(Optional.of(pendingBooking));
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -156,6 +180,22 @@ class BookingServiceImplTest {
 
         assertThat(result.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
         verify(bookingRepository).save(pendingBooking);
+    }
+
+    @Test
+    void updateStatus_confirmarCuandoLaFranjaYaTieneOtraConfirmada_lanzaInvalidBookingStateException() {
+        LocalDate date = LocalDate.now().plusDays(30);
+        Booking pendingBooking = Booking.builder().id(9L).status(BookingStatus.PENDING)
+                .eventDate(date).eventTime(LocalTime.of(21, 0)).timeSlot(TimeSlot.EVENING).build();
+        when(bookingRepository.findById(9L)).thenReturn(Optional.of(pendingBooking));
+        // Se excluye la propia reserva (id 9) para que no choque consigo misma.
+        when(availabilityService.isTakenByConfirmedBooking(date, TimeSlot.EVENING, 9L)).thenReturn(true);
+
+        assertThatThrownBy(() -> bookingService.updateStatus(9L, BookingStatus.CONFIRMED))
+                .isInstanceOf(InvalidBookingStateException.class)
+                .hasMessageContaining("tarde/noche");
+
+        verify(bookingRepository, never()).save(any());
     }
 
     @Test

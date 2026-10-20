@@ -86,7 +86,7 @@ class BookingContactApiIntegrationTest {
     private String bookingJson(String name, String email, String phone) {
         return """
                 {"customerName":"%s","customerEmail":"%s",
-                 "customerPhone":"%s","eventDate":"%s","eventTime":"13:00",
+                 "customerPhone":"%s","eventDate":"%s","eventTime":"13:00","timeSlot":"MIDDAY",
                  "estimatedDurationHours":3,"eventType":"WEDDING","guestCount":80,
                  "location":"Finca de prueba","serviceType":"CUT_ONLY",
                  "localityOption":"LISTED","localityId":%d}

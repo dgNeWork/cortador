@@ -37,6 +37,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * La franja pedida ya está ocupada: 409 (Conflict), igual que los
+     * cambios de estado no permitidos, porque choca con algo que ya existe.
+     */
+    @ExceptionHandler(SlotUnavailableException.class)
+    public ResponseEntity<ApiError> handleSlotUnavailable(SlotUnavailableException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+
+    /**
      * Errores de reglas de negocio que no son un simple fallo de
      * validación, por ejemplo una reserva de servicio completo enviada
      * sin elegir jamón.

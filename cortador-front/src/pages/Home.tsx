@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import PhotoGallery from "../components/PhotoGallery";
 import PlaceholderImage from "../components/PlaceholderImage";
 import { galleryPhotos } from "../config/gallery";
+import { getBookingTexts } from "../config/bookingTexts";
 import { siteConfig } from "../config/site";
 
 // Todos los textos salen de config/site.ts (siteConfig.home), para que
@@ -24,6 +25,7 @@ const heroPhoto = galleryPhotos.find((photo) => photo.id === "2") ?? galleryPhot
 // cómo funciona y CTA final.
 export default function Home() {
   const location = useLocation();
+  const { ctaLabel } = getBookingTexts();
 
   // El botón "Galería" de la cabecera enlaza a "/#galeria": si venimos
   // de otra página, al llegar aquí hacemos scroll hasta esa sección.
@@ -55,7 +57,7 @@ export default function Home() {
             to="/reservar"
             className="mt-8 inline-block rounded-full bg-brand-600 px-8 py-3 text-sm font-medium text-surface transition-colors hover:bg-brand-700"
           >
-            Reservar ahora
+            {ctaLabel}
           </Link>
         </motion.div>
 
@@ -231,7 +233,7 @@ export default function Home() {
             to="/reservar"
             className="mt-8 inline-block rounded-full bg-brand-500 px-8 py-3 text-sm font-medium text-surface transition-colors hover:bg-brand-400"
           >
-            Reservar ahora
+            {ctaLabel}
           </Link>
         </motion.div>
       </section>

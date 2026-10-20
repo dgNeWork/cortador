@@ -3,6 +3,7 @@ package com.cortador.back.model;
 import com.cortador.back.model.enums.BookingStatus;
 import com.cortador.back.model.enums.EventType;
 import com.cortador.back.model.enums.ServiceType;
+import com.cortador.back.model.enums.TimeSlot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -68,6 +69,12 @@ public class Booking {
 
     @Column(nullable = false)
     private LocalTime eventTime;
+
+    // Franja del evento (mañana/tarde o tarde/noche). Puede ser null en
+    // las reservas creadas antes de que existieran las franjas: para
+    // ellas se usa effectiveTimeSlot(), que la deduce de la hora.
+    @Enumerated(EnumType.STRING)
+    private TimeSlot timeSlot;
 
     @Column(nullable = false)
     private Integer estimatedDurationHours;
@@ -135,6 +142,12 @@ public class Booking {
      * Toda reserva nueva empieza en estado PENDING y guarda su fecha de
      * creación en automático - esto no se debe poner nunca a mano.
      */
+    // Franja de la reserva: la elegida por el cliente o, en las reservas
+    // antiguas que no la guardaban, la que corresponde a su hora.
+    public TimeSlot effectiveTimeSlot() {
+        return timeSlot != null ? timeSlot : TimeSlot.fromEventTime(eventTime);
+    }
+
     // Nombre de contacto de esta reserva: el de la solicitud o, en las
     // reservas antiguas que no lo guardaban, el de la ficha del cliente.
     public String contactName() {
