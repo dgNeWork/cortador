@@ -82,9 +82,9 @@ public class BookingController {
     private BookingResponse toResponse(Booking booking) {
         return BookingResponse.builder()
                 .id(booking.getId())
-                .customerName(booking.getCustomer().getName())
+                .customerName(booking.contactName())
                 .customerEmail(booking.getCustomer().getEmail())
-                .customerPhone(booking.getCustomer().getPhone())
+                .customerPhone(booking.contactPhone())
                 .eventDate(booking.getEventDate())
                 .eventTime(booking.getEventTime())
                 .estimatedDurationHours(booking.getEstimatedDurationHours())

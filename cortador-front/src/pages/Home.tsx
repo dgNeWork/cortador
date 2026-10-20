@@ -6,38 +6,9 @@ import PlaceholderImage from "../components/PlaceholderImage";
 import { galleryPhotos } from "../config/gallery";
 import { siteConfig } from "../config/site";
 
-// Textos de las dos modalidades de servicio, se muestran en la home.
-const services = [
-  {
-    title: "Solo corte",
-    description:
-      "Tú aportas la pieza y nosotros nos encargamos del corte profesional en directo, con la técnica y el ritmo adecuados para tu evento.",
-  },
-  {
-    title: "Servicio completo",
-    description:
-      "Llevamos el jamón (cebo, cebo de campo o bellota, a elegir) además del corte, para que no tengas que preocuparte de nada más.",
-  },
-];
-
-// Pasos del proceso de reserva, para la sección "Cómo funciona".
-const steps = [
-  {
-    number: "01",
-    title: "Reserva tu fecha",
-    description: "Rellena el formulario con los detalles de tu evento en menos de dos minutos.",
-  },
-  {
-    number: "02",
-    title: "Confirmamos contigo",
-    description: "Revisamos tu solicitud y te confirmamos disponibilidad y detalles finales.",
-  },
-  {
-    number: "03",
-    title: "Disfruta el evento",
-    description: "Llegamos puntuales con el material necesario y nos encargamos de todo el corte.",
-  },
-];
+// Todos los textos salen de config/site.ts (siteConfig.home), para que
+// cada cortador pueda cambiarlos sin tocar este componente.
+const { home } = siteConfig;
 
 // Animación simple para Framer Motion: aparece con un poco de
 // desplazamiento hacia arriba (de "hidden" a "visible").
@@ -77,12 +48,9 @@ export default function Home() {
             {siteConfig.tagline}
           </p>
           <h1 className="mt-4 font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">
-            Corte de jamón profesional para bodas y eventos
+            {home.heroTitle}
           </h1>
-          <p className="mt-6 text-lg text-ink-muted">
-            Precisión, presentación y experiencia en cada loncha. Reserva en minutos y deja el
-            resto en nuestras manos.
-          </p>
+          <p className="mt-6 text-lg text-ink-muted">{home.heroText}</p>
           <Link
             to="/reservar"
             className="mt-8 inline-block rounded-full bg-brand-600 px-8 py-3 text-sm font-medium text-surface transition-colors hover:bg-brand-700"
@@ -169,7 +137,7 @@ export default function Home() {
           transition={{ duration: 0.5 }}
           className="font-display text-3xl font-semibold text-ink"
         >
-          Eventos en los que hemos estado
+          {home.galleryTitle}
         </motion.h2>
 
         <div className="mt-10">
@@ -188,11 +156,11 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="font-display text-3xl font-semibold text-ink"
           >
-            Modalidades de servicio
+            {home.servicesTitle}
           </motion.h2>
 
           <div className="mt-10 grid gap-10 sm:grid-cols-2">
-            {services.map((service, index) => (
+            {home.services.map((service, index) => (
               <motion.div
                 key={service.title}
                 initial="hidden"
@@ -221,13 +189,13 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="font-display text-3xl font-semibold text-ink"
           >
-            Cómo funciona
+            {home.stepsTitle}
           </motion.h2>
 
           <div className="mt-10 grid gap-10 sm:grid-cols-3">
-            {steps.map((step, index) => (
+            {home.steps.map((step, index) => (
               <motion.div
-                key={step.number}
+                key={step.title}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, margin: "-80px" }}
@@ -235,7 +203,7 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
                 <span className="font-display text-4xl font-semibold text-brand-400">
-                  {step.number}
+                  {String(index + 1).padStart(2, "0")}
                 </span>
                 <h3 className="mt-3 font-display text-lg font-semibold text-ink">{step.title}</h3>
                 <p className="mt-2 text-ink-muted">{step.description}</p>
@@ -256,11 +224,9 @@ export default function Home() {
           className="mx-auto max-w-6xl px-6 py-16 text-center"
         >
           <h2 className="font-display text-3xl font-semibold text-surface">
-            ¿Listo para tu evento?
+            {home.ctaTitle}
           </h2>
-          <p className="mt-3 text-surface/80">
-            Cuéntanos los detalles y te confirmamos disponibilidad cuanto antes.
-          </p>
+          <p className="mt-3 text-surface/80">{home.ctaText}</p>
           <Link
             to="/reservar"
             className="mt-8 inline-block rounded-full bg-brand-500 px-8 py-3 text-sm font-medium text-surface transition-colors hover:bg-brand-400"
