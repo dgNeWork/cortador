@@ -43,12 +43,16 @@ public class BookingServiceImpl implements BookingService {
         Quote quote = quoteService.quote(request);
         PriceBreakdown price = quote.breakdown();
 
-        // Buscamos el cliente por su email, o lo creamos si es la primera vez.
+        // Buscamos el cliente por su email (o lo creamos si es la primera
+        // vez); su ficha queda actualizada con el nombre y teléfono de ahora.
         Customer customer = customerService.findOrCreate(
                 request.getCustomerName(), request.getCustomerEmail(), request.getCustomerPhone());
 
         Booking booking = Booking.builder()
                 .customer(customer)
+                // Copia del contacto de esta solicitud (ya sin espacios sobrantes).
+                .customerName(customer.getName())
+                .customerPhone(customer.getPhone())
                 .eventDate(request.getEventDate())
                 .eventTime(request.getEventTime())
                 .estimatedDurationHours(request.getEstimatedDurationHours())

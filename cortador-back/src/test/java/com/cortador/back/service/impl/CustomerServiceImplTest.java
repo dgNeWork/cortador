@@ -11,7 +11,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +32,7 @@ class CustomerServiceImplTest {
     private CustomerRepository customerRepository;
 
     @Test
-    void findOrCreate_cuandoElEmailYaExiste_devuelveElClienteExistente() {
+    void findOrCreate_cuandoElEmailYaExiste_actualizaSuFichaConLosDatosNuevos() {
         // Arrange: preparamos el escenario. Le decimos al mock que, si le
         // preguntan por este email, actúe como si ya existiera en la BD.
         Customer existingCustomer = Customer.builder()
@@ -43,17 +42,36 @@ class CustomerServiceImplTest {
                 .phone("600111222")
                 .build();
         when(customerRepository.findByEmail("ana@example.com")).thenReturn(Optional.of(existingCustomer));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CustomerServiceImpl customerService = new CustomerServiceImpl(customerRepository);
 
-        // Act: ejecutamos el método que queremos probar.
-        Customer result = customerService.findOrCreate("Ana García", "ana@example.com", "600111222");
+        // Act: ejecutamos el método que queremos probar. Ana vuelve a
+        // reservar, esta vez con otro teléfono.
+        Customer result = customerService.findOrCreate("Ana García", "ana@example.com", "699999999");
 
-        // Assert: comprobamos que el resultado es el esperado.
-        assertThat(result).isEqualTo(existingCustomer);
-        // Y comprobamos que NO se ha intentado crear un cliente nuevo,
-        // porque ya existía uno con ese email.
-        verify(customerRepository, never()).save(any());
+        // Assert: es el mismo cliente (mismo id, no se ha creado otro), pero
+        // con el teléfono nuevo, y se ha guardado.
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getPhone()).isEqualTo("699999999");
+        verify(customerRepository).save(existingCustomer);
+    }
+
+    @Test
+    void findOrCreate_normalizaElEmail_paraNoDuplicarClientesPorMayusculasOEspacios() {
+        when(customerRepository.findByEmail("ana@example.com")).thenReturn(Optional.empty());
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CustomerServiceImpl customerService = new CustomerServiceImpl(customerRepository);
+
+        Customer result = customerService.findOrCreate("  Ana García ", "  Ana@Example.COM ", " 600111222 ");
+
+        // Se ha buscado y guardado el email "limpio", y sin espacios sobrantes
+        // en el nombre ni en el teléfono.
+        verify(customerRepository).findByEmail("ana@example.com");
+        assertThat(result.getEmail()).isEqualTo("ana@example.com");
+        assertThat(result.getName()).isEqualTo("Ana García");
+        assertThat(result.getPhone()).isEqualTo("600111222");
     }
 
     @Test

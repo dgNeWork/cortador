@@ -6,7 +6,7 @@ import { ApiError } from "../api/client";
 import { getPublicLocalities } from "../api/pricing";
 import { Field, inputClass } from "../components/FormField";
 import PriceSummary from "../components/PriceSummary";
-import { formatEuros } from "../format";
+import { formatEuros, formatEventDate } from "../format";
 import { useQuote } from "../hooks/useQuote";
 import { EVENT_TYPE_LABELS } from "../labels";
 import type { BookingResponse, EventType, HamType, PublicLocalities, QuoteRequest, ServiceType } from "../types";
@@ -417,7 +417,9 @@ function BookingConfirmation({ booking }: { booking: BookingResponse }) {
         ¡Solicitud recibida, {booking.customerName.split(" ")[0]}!
       </h1>
       <p className="mt-3 text-ink-muted">
-        Te hemos apuntado la reserva #{booking.id} para el {booking.eventDate} en{" "}
+        {/* La fecha va en mitad de la frase, así que toda en minúscula
+            ("para el martes, 20 de octubre de 2026"). */}
+        Te hemos apuntado la reserva #{booking.id} para el {formatEventDate(booking.eventDate).toLowerCase()} en{" "}
         {booking.location}. Te contactaremos a {booking.customerEmail} en cuanto la confirmemos.
       </p>
       <p className="mt-4 text-ink">

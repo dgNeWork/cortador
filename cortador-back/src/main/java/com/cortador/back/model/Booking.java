@@ -54,6 +54,15 @@ public class Booking {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    // Nombre y teléfono tal y como se escribieron en ESTA solicitud. La
+    // ficha del cliente se actualiza con los últimos datos, pero así cada
+    // reserva conserva los suyos (un wedding planner que pide varias bodas,
+    // o dos personas que comparten email). Las reservas anteriores a este
+    // cambio no los tienen (null): para ellas se usan los de la ficha.
+    private String customerName;
+
+    private String customerPhone;
+
     @Column(nullable = false)
     private LocalDate eventDate;
 
@@ -126,6 +135,17 @@ public class Booking {
      * Toda reserva nueva empieza en estado PENDING y guarda su fecha de
      * creación en automático - esto no se debe poner nunca a mano.
      */
+    // Nombre de contacto de esta reserva: el de la solicitud o, en las
+    // reservas antiguas que no lo guardaban, el de la ficha del cliente.
+    public String contactName() {
+        return customerName != null ? customerName : customer.getName();
+    }
+
+    // Igual que contactName(), para el teléfono.
+    public String contactPhone() {
+        return customerPhone != null ? customerPhone : customer.getPhone();
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

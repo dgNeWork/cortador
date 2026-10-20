@@ -112,6 +112,9 @@ class BookingServiceImplTest {
         Booking result = bookingService.create(request);
 
         assertThat(result.getCustomer()).isEqualTo(customer);
+        // La reserva guarda su propia copia del contacto de esta solicitud.
+        assertThat(result.getCustomerName()).isEqualTo("Ana García");
+        assertThat(result.getCustomerPhone()).isEqualTo("600111222");
         assertThat(result.getHamType()).isEqualTo(bellota);
         assertThat(result.getLocalityName()).isEqualTo("Cádiz");
         assertThat(result.getDistanceKm()).isEqualTo(70);
