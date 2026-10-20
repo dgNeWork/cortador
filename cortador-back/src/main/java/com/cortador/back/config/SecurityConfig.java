@@ -28,7 +28,7 @@ import java.util.List;
  * válido en la cabecera Authorization, comprobado por JwtAuthenticationFilter.
  *
  * Público: registrar una reserva, pedir su presupuesto, ver el catálogo de
- * jamones y las localidades, y el login.
+ * jamones, las localidades y los días ocupados del calendario, y el login.
  * El resto (listar/editar reservas, el catálogo del panel...) es solo
  * para el admin logueado.
  */
@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bookings/quote").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/localities").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/availability").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ham-types/**").permitAll()
                         // /error es la ruta interna a la que Spring reenvía los
                         // errores que no recoge GlobalExceptionHandler (por

@@ -3,6 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 import AdminLayout from "./layouts/AdminLayout";
 import PublicLayout from "./layouts/PublicLayout";
+import AdminCalendar from "./pages/admin/AdminCalendar";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminHamTypes from "./pages/admin/AdminHamTypes";
 import AdminPricing from "./pages/admin/AdminPricing";
@@ -33,6 +34,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/calendario" element={<AdminCalendar />} />
             <Route path="/admin/jamones" element={<AdminHamTypes />} />
             <Route path="/admin/tarifas" element={<AdminPricing />} />
           </Route>
