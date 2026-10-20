@@ -9,6 +9,13 @@ export const siteConfig = {
   businessName: "Cortador Pro",
   tagline: "Corte de jamón profesional para tus eventos",
 
+  // Modo presupuesto: si está activado (true), el cliente no ve ningún
+  // precio salvo el de los jamones. Envía una solicitud de presupuesto y
+  // disponibilidad, y el precio calculado solo le llega al cortador, que
+  // lo cierra con él por teléfono. Con false, el cliente ve el precio
+  // desglosado en vivo mientras rellena el formulario.
+  quoteMode: true,
+
   // Dirección pública de la web, sin barra final. Hace falta para la
   // imagen que muestran WhatsApp o Google al compartir el enlace, que
   // tiene que ser una dirección completa (no vale "/images/...").
@@ -48,7 +55,7 @@ export const siteConfig = {
   home: {
     heroTitle: "Corte de jamón profesional para bodas y eventos",
     heroText:
-      "Precisión, presentación y experiencia en cada loncha. Reserva en minutos y deja el resto en nuestras manos.",
+      "Precisión, presentación y experiencia en cada loncha. Consulta tu fecha en minutos y deja el resto en nuestras manos.",
     galleryTitle: "Eventos en los que hemos estado",
     servicesTitle: "Modalidades de servicio",
     // Las dos formas de contratar el servicio.
@@ -69,12 +76,12 @@ export const siteConfig = {
     // página según el orden, así que aquí no hace falta escribirlo.
     steps: [
       {
-        title: "Reserva tu fecha",
-        description: "Rellena el formulario con los detalles de tu evento en menos de dos minutos.",
+        title: "Pide tu presupuesto",
+        description: "Elige el día y cuéntanos los detalles de tu evento en menos de dos minutos.",
       },
       {
-        title: "Confirmamos contigo",
-        description: "Revisamos tu solicitud y te confirmamos disponibilidad y detalles finales.",
+        title: "Hablamos contigo",
+        description: "Te llamamos para cerrar los detalles y el precio, y te confirmamos la fecha.",
       },
       {
         title: "Disfruta el evento",

@@ -1,5 +1,5 @@
 import { formatEventDate } from "../../format";
-import { BOOKING_STATUS_LABELS, EVENT_TYPE_LABELS, SERVICE_TYPE_LABELS } from "../../labels";
+import { BOOKING_STATUS_LABELS, EVENT_TYPE_LABELS, SERVICE_TYPE_LABELS, TIME_SLOT_LABELS } from "../../labels";
 import type { BookingResponse, BookingStatus, PriceAdjustmentRequest } from "../../types";
 import BookingPrice from "./BookingPrice";
 import { BOOKING_ACTIONS, type BookingAction } from "./bookingActions";
@@ -40,7 +40,8 @@ export default function BookingCard({ booking, updating, onAction, onAdjustPrice
             {formatEventDate(booking.eventDate)}
           </p>
           <p className="text-sm text-ink-muted">
-            {booking.eventTime.slice(0, 5)} h · {booking.estimatedDurationHours} h de servicio ·{" "}
+            {TIME_SLOT_LABELS[booking.timeSlot]} · {booking.eventTime.slice(0, 5)} h ·{" "}
+            {booking.estimatedDurationHours} h de servicio ·{" "}
             {EVENT_TYPE_LABELS[booking.eventType]}
           </p>
         </div>

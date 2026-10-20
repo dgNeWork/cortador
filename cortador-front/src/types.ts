@@ -10,6 +10,9 @@ export type ServiceType = "CUT_ONLY" | "FULL_SERVICE";
 // de su lista, u otra que no está en la lista (precio a consultar).
 export type LocalityOption = "HOME" | "LISTED" | "OTHER";
 
+// Franja del evento. El cliente la ve sin horas: "Mañana/tarde" o "Tarde/noche".
+export type TimeSlot = "MIDDAY" | "EVENING";
+
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
 
 export interface HamType {
@@ -34,6 +37,7 @@ export interface BookingRequest {
   customerPhone: string;
   eventDate: string; // formato yyyy-MM-dd
   eventTime: string; // formato HH:mm
+  timeSlot: TimeSlot;
   estimatedDurationHours: number;
   eventType: EventType;
   guestCount: number;
@@ -53,6 +57,7 @@ export interface BookingResponse {
   customerPhone: string;
   eventDate: string;
   eventTime: string;
+  timeSlot: TimeSlot;
   estimatedDurationHours: number;
   eventType: EventType;
   guestCount: number;

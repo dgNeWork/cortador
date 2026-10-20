@@ -4,6 +4,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getBookingTexts } from "../config/bookingTexts";
 import { siteConfig } from "../config/site";
 import Home from "./Home";
 
@@ -58,10 +59,10 @@ describe("Página de inicio", () => {
     });
   });
 
-  it("los botones de reservar llevan al formulario", () => {
+  it("los botones de reservar (o de pedir presupuesto) llevan al formulario", () => {
     renderHome();
 
-    const links = screen.getAllByRole("link", { name: "Reservar ahora" });
+    const links = screen.getAllByRole("link", { name: getBookingTexts().ctaLabel });
     expect(links.length).toBeGreaterThan(0);
     links.forEach((link) => expect(link).toHaveAttribute("href", "/reservar"));
   });

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getBookingTexts } from "../config/bookingTexts";
 import { siteConfig } from "../config/site";
 
 // El enlace de WhatsApp necesita el teléfono solo con dígitos (sin
@@ -29,7 +30,7 @@ export default function Footer() {
               Galería
             </Link>
             <Link to="/reservar" className="transition-colors hover:text-ink">
-              Reservar
+              {getBookingTexts().navLabel}
             </Link>
           </nav>
         </div>

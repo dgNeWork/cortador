@@ -3,6 +3,7 @@ package com.cortador.back.dto.request;
 import com.cortador.back.model.enums.EventType;
 import com.cortador.back.model.enums.LocalityOption;
 import com.cortador.back.model.enums.ServiceType;
+import com.cortador.back.model.enums.TimeSlot;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
@@ -40,6 +41,9 @@ public class BookingRequest implements PricingInput {
 
     @NotNull(message = "La hora es obligatoria")
     private LocalTime eventTime;
+
+    @NotNull(message = "Elige la franja del evento")
+    private TimeSlot timeSlot;
 
     @NotNull(message = "La duración es obligatoria")
     @Positive(message = "La duración debe ser de al menos 1 hora")

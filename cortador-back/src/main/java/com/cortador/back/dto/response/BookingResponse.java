@@ -3,6 +3,7 @@ package com.cortador.back.dto.response;
 import com.cortador.back.model.enums.BookingStatus;
 import com.cortador.back.model.enums.EventType;
 import com.cortador.back.model.enums.ServiceType;
+import com.cortador.back.model.enums.TimeSlot;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,6 +28,7 @@ public class BookingResponse {
     private String customerPhone;
     private LocalDate eventDate;
     private LocalTime eventTime;
+    private TimeSlot timeSlot;
     private Integer estimatedDurationHours;
     private EventType eventType;
     private Integer guestCount;

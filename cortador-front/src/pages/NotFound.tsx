@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getBookingTexts } from "../config/bookingTexts";
 
 // Página para cualquier dirección que no existe (un enlace antiguo o mal
 // escrito). Sin ella la pantalla se quedaba en blanco, sin cabecera ni
@@ -23,7 +24,7 @@ export default function NotFound() {
           to="/reservar"
           className="rounded-full bg-brand-600 px-6 py-3 text-sm font-medium text-surface transition-colors hover:bg-brand-700"
         >
-          Consultar presupuesto y disponibilidad
+          {getBookingTexts().ctaLabel}
         </Link>
       </div>
     </section>

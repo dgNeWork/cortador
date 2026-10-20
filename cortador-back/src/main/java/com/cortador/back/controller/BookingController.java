@@ -87,6 +87,7 @@ public class BookingController {
                 .customerPhone(booking.contactPhone())
                 .eventDate(booking.getEventDate())
                 .eventTime(booking.getEventTime())
+                .timeSlot(booking.effectiveTimeSlot())
                 .estimatedDurationHours(booking.getEstimatedDurationHours())
                 .eventType(booking.getEventType())
                 .guestCount(booking.getGuestCount())

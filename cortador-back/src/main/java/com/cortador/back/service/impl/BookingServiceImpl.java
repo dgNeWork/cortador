@@ -1,8 +1,10 @@
 package com.cortador.back.service.impl;
 
+import com.cortador.back.availability.AvailabilityService;
 import com.cortador.back.dto.request.BookingRequest;
 import com.cortador.back.exception.InvalidBookingStateException;
 import com.cortador.back.exception.ResourceNotFoundException;
+import com.cortador.back.exception.SlotUnavailableException;
 import com.cortador.back.model.Booking;
 import com.cortador.back.model.Customer;
 import com.cortador.back.model.enums.BookingStatus;
@@ -33,10 +35,17 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final CustomerService customerService;
     private final QuoteService quoteService;
+    private final AvailabilityService availabilityService;
 
     @Override
     public Booking create(BookingRequest request) {
-        // Primero el presupuesto: además de calcular el precio, comprueba
+        // Lo primero, que la franja siga libre: si alguien la ha ocupado
+        // mientras el cliente rellenaba el formulario, no seguimos.
+        if (availabilityService.isTakenByConfirmedBooking(request.getEventDate(), request.getTimeSlot(), null)) {
+            throw new SlotUnavailableException("Esa franja ya no está disponible ese día. Elige otro día u otra franja.");
+        }
+
+        // Después, el presupuesto: además de calcular el precio, comprueba
         // las reglas de negocio (jamón obligatorio en servicio completo,
         // jamón activo, localidad válida). Va antes de tocar al cliente
         // para no crear clientes a partir de reservas que se van a rechazar.
@@ -55,6 +64,7 @@ public class BookingServiceImpl implements BookingService {
                 .customerPhone(customer.getPhone())
                 .eventDate(request.getEventDate())
                 .eventTime(request.getEventTime())
+                .timeSlot(request.getTimeSlot())
                 .estimatedDurationHours(request.getEstimatedDurationHours())
                 .eventType(request.getEventType())
                 .guestCount(request.getGuestCount())
@@ -96,6 +106,14 @@ public class BookingServiceImpl implements BookingService {
             String closedAs = booking.getStatus() == BookingStatus.CANCELLED ? "cancelada" : "completada";
             throw new InvalidBookingStateException(
                     "La reserva " + id + " ya está " + closedAs + " y no se puede cambiar de estado");
+        }
+
+        // Confirmar una reserva ocupa su franja: si ya hay otra confirmada
+        // ese día en la misma franja, el cortador tendría dos eventos a la vez.
+        if (newStatus == BookingStatus.CONFIRMED && availabilityService.isTakenByConfirmedBooking(
+                booking.getEventDate(), booking.effectiveTimeSlot(), booking.getId())) {
+            throw new InvalidBookingStateException("Ya tienes otra reserva confirmada ese día por la "
+                    + booking.effectiveTimeSlot().getLabel() + ". Cancélala antes de confirmar esta.");
         }
 
         booking.setStatus(newStatus);

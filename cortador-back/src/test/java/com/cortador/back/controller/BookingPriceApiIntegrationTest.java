@@ -81,7 +81,7 @@ class BookingPriceApiIntegrationTest {
     private String bookingJson() {
         return """
                 {"customerName":"Cliente de prueba","customerEmail":"prueba@example.com",
-                 "customerPhone":"600000000","eventDate":"%s","eventTime":"13:00",
+                 "customerPhone":"600000000","eventDate":"%s","eventTime":"13:00","timeSlot":"MIDDAY",
                  "estimatedDurationHours":3,"eventType":"WEDDING","guestCount":80,
                  "location":"Finca de prueba","serviceType":"CUT_ONLY",
                  "localityOption":"LISTED","localityId":%d}
