@@ -59,6 +59,8 @@ export default defineConfig({
     environment: 'jsdom',
     // Se ejecuta antes de cada archivo de test, ver src/test/setup.ts.
     setupFiles: ['./src/test/setup.ts'],
+    // Desde Node 25, Node trae su propio localStorage, que tapa al de jsdom y rompe los tests.
+    execArgv: ['--no-experimental-webstorage'],
     coverage: {
       provider: 'v8',
       // Formato que luego lee SonarCloud para mostrar la cobertura real.
